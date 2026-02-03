@@ -819,12 +819,6 @@
         feedbackEl.innerHTML = `<span class="feedback-icon">✓</span> ${answerKey[qName].right}`;
       } else {
         selected.closest('.option-label').classList.add('incorrect-answer');
-        // Highlight the correct one
-        allLabels.forEach(l => {
-          if (l.querySelector('input').value === correctValue) {
-            l.classList.add('correct-answer');
-          }
-        });
         feedbackEl.className = 'feedback incorrect';
         feedbackEl.innerHTML = `<span class="feedback-icon">✗</span> ${answerKey[qName].wrong[selectedValue]}`;
       }
