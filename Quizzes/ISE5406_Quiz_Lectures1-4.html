@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISE 5406 — Quiz: Lectures 1–4</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --maroon: #861F41;
+    --burnt-orange: #E87722;
+    --cream: #FAF8F4;
+    --dark: #1a1a1a;
+    --mid: #4a4a4a;
+    --light-border: #e0dcd6;
+    --correct-bg: #e8f5e9;
+    --correct-border: #43a047;
+    --correct-text: #2e7d32;
+    --incorrect-bg: #fce4ec;
+    --incorrect-border: #e53935;
+    --incorrect-text: #c62828;
+    --info-bg: #e3f2fd;
+    --info-border: #1976d2;
+    --info-text: #0d47a1;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--cream);
+    color: var(--dark);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* Header bar */
+  .header {
+    background: var(--maroon);
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+  .header-badge {
+    background: var(--burnt-orange);
+    color: white;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 500;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .header h1 {
+    font-family: 'Source Serif 4', serif;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .header-sub {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.85rem;
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  /* Main container */
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  .intro {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    padding: 1.5rem 1rem;
+    border-bottom: 2px solid var(--light-border);
+  }
+  .intro h2 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--maroon);
+    margin-bottom: 0.5rem;
+  }
+  .intro p {
+    color: var(--mid);
+    font-size: 0.95rem;
+  }
+
+  /* Question card */
+  .question-card {
+    background: white;
+    border: 1px solid var(--light-border);
+    border-radius: 10px;
+    padding: 1.8rem 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    transition: box-shadow 0.3s;
+  }
+  .question-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.07); }
+
+  .question-number {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--burnt-orange);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.75rem;
+  }
+  .question-number .lecture-tag {
+    background: rgba(134,31,65,0.08);
+    color: var(--maroon);
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.7rem;
+  }
+
+  .question-text {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.12rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 1.2rem;
+    line-height: 1.5;
+  }
+
+  /* Options */
+  .options { display: flex; flex-direction: column; gap: 0.5rem; }
+
+  .option-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border: 2px solid var(--light-border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  .option-label:hover {
+    border-color: var(--maroon);
+    background: rgba(134,31,65,0.03);
+  }
+  .option-label input { display: none; }
+
+  .option-marker {
+    flex-shrink: 0;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 2px solid #c0bbb5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #8a8580;
+    transition: all 0.2s;
+    margin-top: 1px;
+  }
+  .option-label:hover .option-marker {
+    border-color: var(--maroon);
+    color: var(--maroon);
+  }
+
+  .option-label.selected {
+    border-color: var(--maroon);
+    background: rgba(134,31,65,0.06);
+  }
+  .option-label.selected .option-marker {
+    background: var(--maroon);
+    border-color: var(--maroon);
+    color: white;
+  }
+
+  /* Answered states */
+  .option-label.correct-answer {
+    border-color: var(--correct-border) !important;
+    background: var(--correct-bg) !important;
+  }
+  .option-label.correct-answer .option-marker {
+    background: var(--correct-border);
+    border-color: var(--correct-border);
+    color: white;
+  }
+  .option-label.incorrect-answer {
+    border-color: var(--incorrect-border) !important;
+    background: var(--incorrect-bg) !important;
+  }
+  .option-label.incorrect-answer .option-marker {
+    background: var(--incorrect-border);
+    border-color: var(--incorrect-border);
+    color: white;
+  }
+  .option-label.disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+  .option-label.disabled:hover {
+    border-color: var(--light-border);
+    background: transparent;
+  }
+
+  /* Feedback */
+  .feedback {
+    margin-top: 1rem;
+    padding: 1rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    display: none;
+    animation: fadeSlideIn 0.35s ease;
+  }
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .feedback.correct {
+    background: var(--correct-bg);
+    border-left: 4px solid var(--correct-border);
+    color: var(--correct-text);
+  }
+  .feedback.incorrect {
+    background: var(--incorrect-bg);
+    border-left: 4px solid var(--incorrect-border);
+    color: var(--incorrect-text);
+  }
+  .feedback-icon { font-weight: 700; margin-right: 0.3rem; }
+
+  /* Submit & Score */
+  .submit-area {
+    text-align: center;
+    margin-top: 2.5rem;
+  }
+  .btn-submit {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    background: var(--maroon);
+    color: white;
+    border: none;
+    padding: 0.9rem 3rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .btn-submit:hover { background: #6e1835; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(134,31,65,0.3); }
+  .btn-submit:active { transform: translateY(0); }
+  .btn-submit:disabled {
+    background: #b0a8a0;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Score panel */
+  .score-panel {
+    display: none;
+    margin-top: 2rem;
+    background: white;
+    border: 2px solid var(--maroon);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    animation: fadeSlideIn 0.5s ease;
+  }
+  .score-panel h3 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.3rem;
+    color: var(--maroon);
+    margin-bottom: 0.75rem;
+  }
+  .score-big {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: var(--maroon);
+    margin: 0.5rem 0;
+  }
+  .score-detail {
+    color: var(--mid);
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+  }
+  .score-bar-track {
+    width: 100%;
+    height: 12px;
+    background: #ece8e3;
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 1rem 0 1.5rem;
+  }
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 1s ease;
+    width: 0%;
+  }
+  .score-bar-fill.high { background: var(--correct-border); }
+  .score-bar-fill.mid { background: var(--burnt-orange); }
+  .score-bar-fill.low { background: var(--incorrect-border); }
+
+  .score-message {
+    font-size: 0.95rem;
+    color: var(--mid);
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+  }
+
+  .screenshot-note {
+    background: var(--info-bg);
+    border: 1px solid var(--info-border);
+    color: var(--info-text);
+    padding: 0.8rem 1rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .timestamp {
+    margin-top: 0.75rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--mid);
+  }
+
+  /* Math-like styling for inline formulas */
+  .math {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+  }
+  code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.88em;
+    background: rgba(0,0,0,0.04);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .header { flex-wrap: wrap; padding: 1rem; }
+    .header h1 { font-size: 1.2rem; }
+    .header-sub { margin-left: 0; width: 100%; font-size: 0.8rem; }
+    .container { padding: 1.2rem 1rem 3rem; }
+    .question-card { padding: 1.3rem 1.2rem; }
+    .score-big { font-size: 2.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-badge">Quiz</span>
+  <h1>ISE 5406: Optimization II</h1>
+  <span class="header-sub">Lectures 1–4 &middot; Spring 2026</span>
+</div>
+
+<div class="container">
+  <div class="intro">
+    <h2>Lectures 1–4 Comprehension Check</h2>
+    <p>Select the best answer for each question, then click <strong>Submit Quiz</strong> to see your score.<br>
+    After submitting, screenshot your results and submit on Canvas.</p>
+  </div>
+
+  <form id="quizForm" onsubmit="return false;">
+
+    <!-- Q1 -->
+    <div class="question-card" id="q1-card">
+      <div class="question-number">Question 1 <span class="lecture-tag">Lecture 1</span></div>
+      <div class="question-text">In the standard mathematical optimization formulation, inequality constraints are written as <span class="math">g<sub>i</sub>(x) &le; 0</span>. What does the set <span class="math">&Iota;</span> represent?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q1')">
+          <input type="radio" name="q1" value="a">
+          <span class="option-marker">A</span>
+          <span>The set of all feasible solutions</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q1')">
+          <input type="radio" name="q1" value="b">
+          <span class="option-marker">B</span>
+          <span>A finite set of indices for the inequality constraints</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q1')">
+          <input type="radio" name="q1" value="c">
+          <span class="option-marker">C</span>
+          <span>The interval [0, 1] used for convex combinations</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q1')">
+          <input type="radio" name="q1" value="d">
+          <span class="option-marker">D</span>
+          <span>The identity matrix of appropriate dimension</span>
+        </label>
+      </div>
+      <div class="feedback" id="q1-feedback"></div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="question-card" id="q2-card">
+      <div class="question-number">Question 2 <span class="lecture-tag">Lecture 1</span></div>
+      <div class="question-text">Which of the following best describes the fundamental challenge of mathematical modeling in optimization?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q2')">
+          <input type="radio" name="q2" value="a">
+          <span class="option-marker">A</span>
+          <span>All optimization models are equally difficult to solve</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q2')">
+          <input type="radio" name="q2" value="b">
+          <span class="option-marker">B</span>
+          <span>A simplistic model gives no insight, while a complex model may be difficult to solve</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q2')">
+          <input type="radio" name="q2" value="c">
+          <span class="option-marker">C</span>
+          <span>There exists one universal optimization algorithm for all problem types</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q2')">
+          <input type="radio" name="q2" value="d">
+          <span class="option-marker">D</span>
+          <span>The objective function must always be linear for the model to be solvable</span>
+        </label>
+      </div>
+      <div class="feedback" id="q2-feedback"></div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="question-card" id="q3-card">
+      <div class="question-number">Question 3 <span class="lecture-tag">Lecture 2</span></div>
+      <div class="question-text">What distinguishes a <em>convex</em> combination from an <em>affine</em> combination of vectors <span class="math">a<sub>1</sub>, &hellip;, a<sub>k</sub></span>?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q3')">
+          <input type="radio" name="q3" value="a">
+          <span class="option-marker">A</span>
+          <span>A convex combination requires the coefficients to sum to zero</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q3')">
+          <input type="radio" name="q3" value="b">
+          <span class="option-marker">B</span>
+          <span>An affine combination requires all coefficients to be positive</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q3')">
+          <input type="radio" name="q3" value="c">
+          <span class="option-marker">C</span>
+          <span>Both require coefficients summing to 1, but a convex combination additionally requires all coefficients to be nonnegative</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q3')">
+          <input type="radio" name="q3" value="d">
+          <span class="option-marker">D</span>
+          <span>There is no difference; the terms are interchangeable</span>
+        </label>
+      </div>
+      <div class="feedback" id="q3-feedback"></div>
+    </div>
+
+    <!-- Q4 -->
+    <div class="question-card" id="q4-card">
+      <div class="question-number">Question 4 <span class="lecture-tag">Lecture 2</span></div>
+      <div class="question-text">Which of the following sets is <strong>not</strong> convex?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q4')">
+          <input type="radio" name="q4" value="a">
+          <span class="option-marker">A</span>
+          <span>A hyperplane {<span class="math">x</span> : <span class="math">a<sup>T</sup>x = b</span>}</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q4')">
+          <input type="radio" name="q4" value="b">
+          <span class="option-marker">B</span>
+          <span>The feasible region {<span class="math">x</span> : <span class="math">Ax = b, x &ge; 0</span>}</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q4')">
+          <input type="radio" name="q4" value="c">
+          <span class="option-marker">C</span>
+          <span>{<span class="math">x &isin; &Ropf;<sup>2</sup><sub>+</sub></span> : <span class="math">x<sub>1</sub>x<sub>2</sub> = 0</span>}</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q4')">
+          <input type="radio" name="q4" value="d">
+          <span class="option-marker">D</span>
+          <span>A closed halfspace {<span class="math">x</span> : <span class="math">a<sup>T</sup>x &le; b</span>}</span>
+        </label>
+      </div>
+      <div class="feedback" id="q4-feedback"></div>
+    </div>
+
+    <!-- Q5 -->
+    <div class="question-card" id="q5-card">
+      <div class="question-number">Question 5 <span class="lecture-tag">Lecture 2</span></div>
+      <div class="question-text">Which operation always preserves convexity of sets?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q5')">
+          <input type="radio" name="q5" value="a">
+          <span class="option-marker">A</span>
+          <span>Union of two convex sets</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q5')">
+          <input type="radio" name="q5" value="b">
+          <span class="option-marker">B</span>
+          <span>Intersection of two convex sets</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q5')">
+          <input type="radio" name="q5" value="c">
+          <span class="option-marker">C</span>
+          <span>Complement of a convex set</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q5')">
+          <input type="radio" name="q5" value="d">
+          <span class="option-marker">D</span>
+          <span>Symmetric difference of two convex sets</span>
+        </label>
+      </div>
+      <div class="feedback" id="q5-feedback"></div>
+    </div>
+
+    <!-- Q6 -->
+    <div class="question-card" id="q6-card">
+      <div class="question-number">Question 6 <span class="lecture-tag">Lecture 3</span></div>
+      <div class="question-text">A set <span class="math">S &sube; &Ropf;<sup>n</sup></span> is <em>compact</em> if and only if it is:</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q6')">
+          <input type="radio" name="q6" value="a">
+          <span class="option-marker">A</span>
+          <span>Open and bounded</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q6')">
+          <input type="radio" name="q6" value="b">
+          <span class="option-marker">B</span>
+          <span>Closed and bounded</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q6')">
+          <input type="radio" name="q6" value="c">
+          <span class="option-marker">C</span>
+          <span>Closed and convex</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q6')">
+          <input type="radio" name="q6" value="d">
+          <span class="option-marker">D</span>
+          <span>Convex and bounded</span>
+        </label>
+      </div>
+      <div class="feedback" id="q6-feedback"></div>
+    </div>
+
+    <!-- Q7 -->
+    <div class="question-card" id="q7-card">
+      <div class="question-number">Question 7 <span class="lecture-tag">Lecture 3</span></div>
+      <div class="question-text">Weierstrass' Theorem guarantees the existence of a minimum of <span class="math">f(x)</span> over <span class="math">S</span> under which sufficient conditions?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q7')">
+          <input type="radio" name="q7" value="a">
+          <span class="option-marker">A</span>
+          <span><span class="math">S</span> is nonempty and convex, and <span class="math">f</span> is differentiable on <span class="math">S</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q7')">
+          <input type="radio" name="q7" value="b">
+          <span class="option-marker">B</span>
+          <span><span class="math">S</span> is nonempty and compact, and <span class="math">f</span> is continuous on <span class="math">S</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q7')">
+          <input type="radio" name="q7" value="c">
+          <span class="option-marker">C</span>
+          <span><span class="math">S</span> is open and <span class="math">f</span> is convex on <span class="math">S</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q7')">
+          <input type="radio" name="q7" value="d">
+          <span class="option-marker">D</span>
+          <span><span class="math">S</span> is bounded and <span class="math">f</span> is concave on <span class="math">S</span></span>
+        </label>
+      </div>
+      <div class="feedback" id="q7-feedback"></div>
+    </div>
+
+    <!-- Q8 -->
+    <div class="question-card" id="q8-card">
+      <div class="question-number">Question 8 <span class="lecture-tag">Lecture 3</span></div>
+      <div class="question-text">The Separating Hyperplane Theorem states that for a nonempty closed convex set <span class="math">S</span> and a point <span class="math">y &notin; S</span>, there exists a nonzero vector <span class="math">p</span> and scalar <span class="math">&alpha;</span> such that:</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q8')">
+          <input type="radio" name="q8" value="a">
+          <span class="option-marker">A</span>
+          <span><span class="math">p<sup>T</sup>y &gt; &alpha;</span> and <span class="math">p<sup>T</sup>x &le; &alpha;</span> for each <span class="math">x &isin; S</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q8')">
+          <input type="radio" name="q8" value="b">
+          <span class="option-marker">B</span>
+          <span><span class="math">p<sup>T</sup>y = &alpha;</span> and <span class="math">p<sup>T</sup>x = &alpha;</span> for each <span class="math">x &isin; S</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q8')">
+          <input type="radio" name="q8" value="c">
+          <span class="option-marker">C</span>
+          <span><span class="math">p<sup>T</sup>y &le; &alpha;</span> and <span class="math">p<sup>T</sup>x &ge; &alpha;</span> for each <span class="math">x &isin; S</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q8')">
+          <input type="radio" name="q8" value="d">
+          <span class="option-marker">D</span>
+          <span><span class="math">p<sup>T</sup>y &gt; 0</span> and <span class="math">p<sup>T</sup>x &lt; 0</span> for each <span class="math">x &isin; S</span></span>
+        </label>
+      </div>
+      <div class="feedback" id="q8-feedback"></div>
+    </div>
+
+    <!-- Q9 -->
+    <div class="question-card" id="q9-card">
+      <div class="question-number">Question 9 <span class="lecture-tag">Lecture 4</span></div>
+      <div class="question-text">Which type of function is <em>both</em> convex and concave?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q9')">
+          <input type="radio" name="q9" value="a">
+          <span class="option-marker">A</span>
+          <span>Quadratic functions</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q9')">
+          <input type="radio" name="q9" value="b">
+          <span class="option-marker">B</span>
+          <span>Exponential functions</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q9')">
+          <input type="radio" name="q9" value="c">
+          <span class="option-marker">C</span>
+          <span>Affine functions (<span class="math">a<sup>T</sup>x + b</span>)</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q9')">
+          <input type="radio" name="q9" value="d">
+          <span class="option-marker">D</span>
+          <span>Strictly convex functions</span>
+        </label>
+      </div>
+      <div class="feedback" id="q9-feedback"></div>
+    </div>
+
+    <!-- Q10 -->
+    <div class="question-card" id="q10-card">
+      <div class="question-number">Question 10 <span class="lecture-tag">Lecture 4</span></div>
+      <div class="question-text">The epigraph of a function <span class="math">f : S &rarr; &Ropf;</span> is defined as the set {<span class="math">(x, y) : x &isin; S, y &ge; f(x)</span>}. What is the key relationship between convexity of <span class="math">f</span> and its epigraph?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q10')">
+          <input type="radio" name="q10" value="a">
+          <span class="option-marker">A</span>
+          <span><span class="math">f</span> is convex if and only if its epigraph is a bounded set</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q10')">
+          <input type="radio" name="q10" value="b">
+          <span class="option-marker">B</span>
+          <span><span class="math">f</span> is convex if and only if its epigraph is a convex set</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q10')">
+          <input type="radio" name="q10" value="c">
+          <span class="option-marker">C</span>
+          <span><span class="math">f</span> is convex if and only if its epigraph is an open set</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q10')">
+          <input type="radio" name="q10" value="d">
+          <span class="option-marker">D</span>
+          <span><span class="math">f</span> is convex if and only if its epigraph is empty</span>
+        </label>
+      </div>
+      <div class="feedback" id="q10-feedback"></div>
+    </div>
+
+    <div class="submit-area">
+      <button type="button" class="btn-submit" id="submitBtn" onclick="submitQuiz()">Submit Quiz</button>
+    </div>
+
+    <div class="score-panel" id="scorePanel">
+      <h3>Quiz Complete</h3>
+      <div class="score-big" id="scorePercent">—</div>
+      <div class="score-detail" id="scoreDetail"></div>
+      <div class="score-bar-track">
+        <div class="score-bar-fill" id="scoreBar"></div>
+      </div>
+      <div class="score-message" id="scoreMessage"></div>
+      <div class="screenshot-note">
+        📸 <strong>Screenshot this page</strong> (including your score and answered questions) and submit it on Canvas.
+      </div>
+      <div class="timestamp" id="timestamp"></div>
+    </div>
+
+  </form>
+</div>
+
+<script>
+  // Answer key
+  const answerKey = {
+    q1:  { correct: 'b', 
+           right: 'Correct! In the standard formulation, \u2110 is a finite set of indices for the inequality constraints g_i(x) \u2264 0, just as \u2130 is the finite index set for equality constraints.',
+           wrong: {
+             a: 'Incorrect. The feasible set is the set of all x satisfying all constraints. \u2110 specifically indexes the inequality constraints — it tells you how many inequality constraints there are and labels them.',
+             c: 'Incorrect. The interval [0, 1] appears in the definition of convex combinations, not in the constraint indexing. \u2110 is a finite index set for the inequality constraints.',
+             d: 'Incorrect. \u2110 is not a matrix — it is a finite set of indices used to enumerate the inequality constraints in the standard formulation.'
+           }},
+    q2:  { correct: 'b',
+           right: 'Correct! This is a core modeling insight from Lecture 1: a simplistic model yields no insight into the true problem, while a complex model may be difficult or impossible to solve. Good modeling is about finding the right balance.',
+           wrong: {
+             a: 'Incorrect. Different optimization problems vary enormously in difficulty. The type of problem (LP, NLP, MINLP, etc.) depends on the structure of the functions and constraints.',
+             c: 'Incorrect. In fact, Lecture 1 emphasizes the opposite: there is no universal optimization algorithm. Algorithms must be tailored to the specific problem structure.',
+             d: 'Incorrect. Nonlinear objectives are perfectly valid and lead to NLPs, convex programs, etc. The objective does not need to be linear.'
+           }},
+    q3:  { correct: 'c',
+           right: 'Correct! Both affine and convex combinations require \u03bb_1 + \u2026 + \u03bb_k = 1, but a convex combination additionally requires each \u03bb_j \u2265 0. An affine combination allows the \u03bb_j to be any real numbers.',
+           wrong: {
+             a: 'Incorrect. Both affine and convex combinations require the coefficients to sum to 1, not to zero. The distinction is the nonnegativity requirement on the coefficients.',
+             b: 'Incorrect. It is the convex combination (not the affine combination) that requires nonnegativity. An affine combination only requires the coefficients to sum to 1, with no sign restriction.',
+             d: 'Incorrect. They are distinct concepts. A convex combination is a special case of an affine combination with the additional requirement that all coefficients are nonnegative.'
+           }},
+    q4:  { correct: 'c',
+           right: 'Correct! The set {x \u2208 \u211d\u00b2\u208a : x\u2081x\u2082 = 0} consists of the nonnegative portions of the two coordinate axes. This is not convex because, for example, (1, 0) and (0, 1) are both in the set, but their midpoint (0.5, 0.5) has x\u2081x\u2082 = 0.25 \u2260 0 and is therefore not in the set.',
+           wrong: {
+             a: 'Incorrect. A hyperplane is always convex — it is the intersection of the two halfspaces defined by a\u1d40x \u2264 b and a\u1d40x \u2265 b, and intersections of convex sets are convex.',
+             b: 'Incorrect. The set {x : Ax = b, x \u2265 0} is a polyhedron, which is the intersection of halfspaces and hyperplanes — all convex sets — making the intersection convex.',
+             d: 'Incorrect. A halfspace is one of the fundamental examples of a convex set. For any two points in {x : a\u1d40x \u2264 b}, any convex combination also satisfies the inequality.'
+           }},
+    q5:  { correct: 'b',
+           right: 'Correct! The intersection of any collection (even infinitely many) of convex sets is always convex. This was proved in Lecture 2 and is one of the most important convexity-preserving operations.',
+           wrong: {
+             a: 'Incorrect. The union of two convex sets is generally not convex. For example, two disjoint line segments are each convex, but their union is not.',
+             c: 'Incorrect. The complement of a convex set is generally not convex. For example, the complement of a ball in \u211d\u00b2 is not convex.',
+             d: 'Incorrect. The symmetric difference (elements in one set but not both) does not preserve convexity in general.'
+           }},
+    q6:  { correct: 'b',
+           right: 'Correct! In \u211d\u207f, a set is compact if and only if it is both closed and bounded. This is the Heine\u2013Borel characterization used throughout the course.',
+           wrong: {
+             a: 'Incorrect. Compactness requires the set to be closed, not open. An open bounded set like the open unit ball is not compact because it does not contain its boundary.',
+             c: 'Incorrect. A set can be closed and convex but not compact if it is unbounded. For example, a halfspace is closed and convex but not compact. Compactness requires closed and bounded.',
+             d: 'Incorrect. A set must be closed (not just convex) and bounded to be compact. A convex bounded set that is not closed (e.g., an open ball) is not compact.'
+           }},
+    q7:  { correct: 'b',
+           right: 'Correct! Weierstrass\' Theorem states: if S is a nonempty compact (closed and bounded) set and f is continuous on S, then min{f(x) : x \u2208 S} attains its minimum. This is a fundamental existence result.',
+           wrong: {
+             a: 'Incorrect. Weierstrass\' Theorem does not require convexity of S or differentiability of f. The key conditions are that S is compact (closed and bounded) and f is continuous.',
+             c: 'Incorrect. An open set is not compact, which is critical for the theorem. On an open set, a continuous function might approach but never attain its infimum (e.g., f(x) = 1/x on (0, 1)).',
+             d: 'Incorrect. Boundedness of S alone is not sufficient — S must also be closed to be compact. Additionally, the theorem requires continuity, not concavity.'
+           }},
+    q8:  { correct: 'a',
+           right: 'Correct! The theorem guarantees strict separation: p\u1d40y > \u03b1 for the external point y, while p\u1d40x \u2264 \u03b1 for all x in the closed convex set S. The hyperplane {x : p\u1d40x = \u03b1} separates y from S with y on the strict side.',
+           wrong: {
+             b: 'Incorrect. If p\u1d40y = \u03b1 and p\u1d40x = \u03b1 for all x in S, that would place y on the hyperplane along with all of S — there would be no separation at all.',
+             c: 'Incorrect. You have the inequalities reversed. The point y outside S satisfies p\u1d40y > \u03b1 (strictly), while points in S satisfy p\u1d40x \u2264 \u03b1.',
+             d: 'Incorrect. The separation is relative to a scalar \u03b1, not relative to 0. The theorem says p\u1d40y > \u03b1 and p\u1d40x \u2264 \u03b1, not that the values are positive/negative.'
+           }},
+    q9:  { correct: 'c',
+           right: 'Correct! Affine functions of the form a\u1d40x + b are the only functions that are simultaneously convex and concave. This follows directly from the definitions: the convexity inequality becomes an equality for affine functions.',
+           wrong: {
+             a: 'Incorrect. A quadratic function x\u1d40Qx + c\u1d40x + d is convex when Q is positive semidefinite and concave when Q is negative semidefinite, but it cannot be both unless Q = 0 (making it affine).',
+             b: 'Incorrect. The exponential function e\u02e3 is strictly convex but not concave. Only affine functions have the property of being both convex and concave.',
+             d: 'Incorrect. A strictly convex function cannot be concave (unless it is defined on a single point). Strict convexity is a stronger condition that excludes the possibility of also being concave.'
+           }},
+    q10: { correct: 'b',
+           right: 'Correct! This is a fundamental result from Lecture 4: f is convex if and only if epi(f) is a convex set. This provides the bridge between convex analysis of sets and convex analysis of functions, and it enables the use of separation theorems on epigraphs.',
+           wrong: {
+             a: 'Incorrect. Boundedness of the epigraph is unrelated to convexity of f. In fact, the epigraph of any function defined on an unbounded domain is itself unbounded (it extends upward infinitely).',
+             c: 'Incorrect. Openness of the epigraph is not related to convexity of f. The correct equivalence is: f is convex \u21d4 epi(f) is a convex set.',
+             d: 'Incorrect. The epigraph of any real-valued function is nonempty (it contains all points above the graph). An empty epigraph would mean the function has no values, which is not meaningful.'
+           }}
+  };
+
+  let submitted = false;
+
+  function selectOption(label, qName) {
+    if (submitted) return;
+    const card = label.closest('.question-card');
+    card.querySelectorAll('.option-label').forEach(l => l.classList.remove('selected'));
+    label.classList.add('selected');
+    label.querySelector('input').checked = true;
+  }
+
+  function submitQuiz() {
+    if (submitted) return;
+
+    // Check all answered
+    const totalQ = Object.keys(answerKey).length;
+    let answered = 0;
+    let score = 0;
+
+    for (const qName of Object.keys(answerKey)) {
+      const selected = document.querySelector(`input[name="${qName}"]:checked`);
+      if (selected) answered++;
+    }
+
+    if (answered < totalQ) {
+      alert(`Please answer all ${totalQ} questions before submitting. You have answered ${answered} of ${totalQ}.`);
+      return;
+    }
+
+    submitted = true;
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('submitBtn').textContent = 'Submitted';
+
+    // Grade and show feedback
+    for (const qName of Object.keys(answerKey)) {
+      const selected = document.querySelector(`input[name="${qName}"]:checked`);
+      const selectedValue = selected.value;
+      const correctValue = answerKey[qName].correct;
+      const feedbackEl = document.getElementById(`${qName}-feedback`);
+      const card = document.getElementById(`${qName}-card`);
+      const allLabels = card.querySelectorAll('.option-label');
+
+      // Disable all options
+      allLabels.forEach(l => {
+        l.classList.add('disabled');
+        l.onclick = null;
+      });
+
+      if (selectedValue === correctValue) {
+        score++;
+        selected.closest('.option-label').classList.add('correct-answer');
+        feedbackEl.className = 'feedback correct';
+        feedbackEl.innerHTML = `<span class="feedback-icon">✓</span> ${answerKey[qName].right}`;
+      } else {
+        selected.closest('.option-label').classList.add('incorrect-answer');
+        // Highlight the correct one
+        allLabels.forEach(l => {
+          if (l.querySelector('input').value === correctValue) {
+            l.classList.add('correct-answer');
+          }
+        });
+        feedbackEl.className = 'feedback incorrect';
+        feedbackEl.innerHTML = `<span class="feedback-icon">✗</span> ${answerKey[qName].wrong[selectedValue]}`;
+      }
+      feedbackEl.style.display = 'block';
+    }
+
+    // Show score
+    const pct = Math.round((score / totalQ) * 100);
+    document.getElementById('scorePercent').textContent = `${pct}%`;
+    document.getElementById('scoreDetail').textContent = `${score} out of ${totalQ} correct`;
+
+    const bar = document.getElementById('scoreBar');
+    bar.classList.remove('high', 'mid', 'low');
+    if (pct >= 70) bar.classList.add('high');
+    else if (pct >= 50) bar.classList.add('mid');
+    else bar.classList.add('low');
+    setTimeout(() => { bar.style.width = `${pct}%`; }, 100);
+
+    let msg = '';
+    if (pct === 100) msg = 'Perfect score! Outstanding command of the material.';
+    else if (pct >= 80) msg = 'Great job! You have a solid understanding of the foundational concepts.';
+    else if (pct >= 60) msg = 'Good effort. Review the feedback above to strengthen your understanding of the concepts you missed.';
+    else msg = 'You may want to revisit Lectures 1–4 and review the key definitions and theorems. The feedback above highlights the areas to focus on.';
+    document.getElementById('scoreMessage').textContent = msg;
+
+    const now = new Date();
+    document.getElementById('timestamp').textContent = `Completed: ${now.toLocaleString()}`;
+
+    const panel = document.getElementById('scorePanel');
+    panel.style.display = 'block';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+</script>
+
+</body>
+</html>
