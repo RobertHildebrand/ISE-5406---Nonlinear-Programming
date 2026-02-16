@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISE 5406 — Quiz: Lectures 4–7</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --maroon: #861F41;
+    --burnt-orange: #E87722;
+    --cream: #FAF8F4;
+    --dark: #1a1a1a;
+    --mid: #4a4a4a;
+    --light-border: #e0dcd6;
+    --correct-bg: #e8f5e9;
+    --correct-border: #43a047;
+    --correct-text: #2e7d32;
+    --incorrect-bg: #fce4ec;
+    --incorrect-border: #e53935;
+    --incorrect-text: #c62828;
+    --info-bg: #e3f2fd;
+    --info-border: #1976d2;
+    --info-text: #0d47a1;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--cream);
+    color: var(--dark);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* Header bar */
+  .header {
+    background: var(--maroon);
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+  .header-badge {
+    background: var(--burnt-orange);
+    color: white;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 500;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .header h1 {
+    font-family: 'Source Serif 4', serif;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .header-sub {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.85rem;
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  /* Main container */
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  .intro {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    padding: 1.5rem 1rem;
+    border-bottom: 2px solid var(--light-border);
+  }
+  .intro h2 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--maroon);
+    margin-bottom: 0.5rem;
+  }
+  .intro p {
+    color: var(--mid);
+    font-size: 0.95rem;
+  }
+
+  /* Question card */
+  .question-card {
+    background: white;
+    border: 1px solid var(--light-border);
+    border-radius: 10px;
+    padding: 1.8rem 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    transition: box-shadow 0.3s;
+  }
+  .question-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.07); }
+
+  .question-number {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--burnt-orange);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.75rem;
+  }
+  .question-number .lecture-tag {
+    background: rgba(134,31,65,0.08);
+    color: var(--maroon);
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.7rem;
+  }
+
+  .question-text {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.12rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 1.2rem;
+    line-height: 1.5;
+  }
+
+  /* Options */
+  .options { display: flex; flex-direction: column; gap: 0.5rem; }
+
+  .option-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border: 2px solid var(--light-border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  .option-label:hover {
+    border-color: var(--maroon);
+    background: rgba(134,31,65,0.03);
+  }
+  .option-label input { display: none; }
+
+  .option-marker {
+    flex-shrink: 0;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 2px solid #c0bbb5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #8a8580;
+    transition: all 0.2s;
+    margin-top: 1px;
+  }
+  .option-label:hover .option-marker {
+    border-color: var(--maroon);
+    color: var(--maroon);
+  }
+
+  .option-label.selected {
+    border-color: var(--maroon);
+    background: rgba(134,31,65,0.06);
+  }
+  .option-label.selected .option-marker {
+    background: var(--maroon);
+    border-color: var(--maroon);
+    color: white;
+  }
+
+  /* Answered states */
+  .option-label.correct-answer {
+    border-color: var(--correct-border) !important;
+    background: var(--correct-bg) !important;
+  }
+  .option-label.correct-answer .option-marker {
+    background: var(--correct-border);
+    border-color: var(--correct-border);
+    color: white;
+  }
+  .option-label.incorrect-answer {
+    border-color: var(--incorrect-border) !important;
+    background: var(--incorrect-bg) !important;
+  }
+  .option-label.incorrect-answer .option-marker {
+    background: var(--incorrect-border);
+    border-color: var(--incorrect-border);
+    color: white;
+  }
+  .option-label.disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+  .option-label.disabled:hover {
+    border-color: var(--light-border);
+    background: transparent;
+  }
+
+  /* Feedback */
+  .feedback {
+    margin-top: 1rem;
+    padding: 1rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    display: none;
+    animation: fadeSlideIn 0.35s ease;
+  }
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .feedback.correct {
+    background: var(--correct-bg);
+    border-left: 4px solid var(--correct-border);
+    color: var(--correct-text);
+  }
+  .feedback.incorrect {
+    background: var(--incorrect-bg);
+    border-left: 4px solid var(--incorrect-border);
+    color: var(--incorrect-text);
+  }
+  .feedback-icon { font-weight: 700; margin-right: 0.3rem; }
+
+  /* Submit & Score */
+  .submit-area {
+    text-align: center;
+    margin-top: 2.5rem;
+  }
+  .btn-submit {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    background: var(--maroon);
+    color: white;
+    border: none;
+    padding: 0.9rem 3rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .btn-submit:hover { background: #6e1835; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(134,31,65,0.3); }
+  .btn-submit:active { transform: translateY(0); }
+  .btn-submit:disabled {
+    background: #b0a8a0;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Score panel */
+  .score-panel {
+    display: none;
+    margin-top: 2rem;
+    background: white;
+    border: 2px solid var(--maroon);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    animation: fadeSlideIn 0.5s ease;
+  }
+  .score-panel h3 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.3rem;
+    color: var(--maroon);
+    margin-bottom: 0.75rem;
+  }
+  .score-big {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: var(--maroon);
+    margin: 0.5rem 0;
+  }
+  .score-detail {
+    color: var(--mid);
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+  }
+  .score-bar-track {
+    width: 100%;
+    height: 12px;
+    background: #ece8e3;
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 1rem 0 1.5rem;
+  }
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 1s ease;
+    width: 0%;
+  }
+  .score-bar-fill.high { background: var(--correct-border); }
+  .score-bar-fill.mid { background: var(--burnt-orange); }
+  .score-bar-fill.low { background: var(--incorrect-border); }
+
+  .score-message {
+    font-size: 0.95rem;
+    color: var(--mid);
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+  }
+
+  .screenshot-note {
+    background: var(--info-bg);
+    border: 1px solid var(--info-border);
+    color: var(--info-text);
+    padding: 0.8rem 1rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .timestamp {
+    margin-top: 0.75rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--mid);
+  }
+
+  /* Math-like styling for inline formulas */
+  .math {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+  }
+  code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.88em;
+    background: rgba(0,0,0,0.04);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .header { flex-wrap: wrap; padding: 1rem; }
+    .header h1 { font-size: 1.2rem; }
+    .header-sub { margin-left: 0; width: 100%; font-size: 0.8rem; }
+    .container { padding: 1.2rem 1rem 3rem; }
+    .question-card { padding: 1.3rem 1.2rem; }
+    .score-big { font-size: 2.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-badge">Quiz</span>
+  <h1>ISE 5406: Optimization II</h1>
+  <span class="header-sub">Lectures 4–7 &middot; Spring 2026</span>
+</div>
+
+<div class="container">
+  <div class="intro">
+    <h2>Lectures 4–7 Comprehension Check</h2>
+    <p>Select the best answer for each question, then click <strong>Submit Quiz</strong> to see your score.<br>
+    After submitting, screenshot your results and submit on Canvas.</p>
+  </div>
+
+  <form id="quizForm" onsubmit="return false;">
+
+    <!-- Q1 -->
+    <div class="question-card" id="q1-card">
+      <div class="question-number">Question 1 <span class="lecture-tag">Lecture 4</span></div>
+      <div class="question-text">A function <span class="math">f</span> is <em>strictly convex</em> on a convex set <span class="math">X</span> if for any two <strong>distinct</strong> points <span class="math">x<sub>1</sub> &ne; x<sub>2</sub></span> in <span class="math">X</span> and any <span class="math">&lambda; &isin; (0, 1)</span>, the inequality <span class="math">f(&lambda;x<sub>1</sub> + (1&minus;&lambda;)x<sub>2</sub>) &lt; &lambda;f(x<sub>1</sub>) + (1&minus;&lambda;)f(x<sub>2</sub>)</span> holds. What is a key consequence of strict convexity for minimization?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q1')">
+          <input type="radio" name="q1" value="a">
+          <span class="option-marker">A</span>
+          <span>A strictly convex function may have multiple global minimizers on a convex set</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q1')">
+          <input type="radio" name="q1" value="b">
+          <span class="option-marker">B</span>
+          <span>If a strictly convex function has a minimizer on a convex set, it is the <strong>unique</strong> global minimizer</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q1')">
+          <input type="radio" name="q1" value="c">
+          <span class="option-marker">C</span>
+          <span>Strict convexity guarantees a minimizer always exists on any convex set</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q1')">
+          <input type="radio" name="q1" value="d">
+          <span class="option-marker">D</span>
+          <span>Strictly convex functions are always differentiable</span>
+        </label>
+      </div>
+      <div class="feedback" id="q1-feedback"></div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="question-card" id="q2-card">
+      <div class="question-number">Question 2 <span class="lecture-tag">Lecture 4</span></div>
+      <div class="question-text">The second-order condition states that a twice-differentiable function <span class="math">f</span> on an open convex set is convex if and only if its Hessian <span class="math">&nabla;&sup2;f(x)</span> satisfies a certain property at every point. What is that property?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q2')">
+          <input type="radio" name="q2" value="a">
+          <span class="option-marker">A</span>
+          <span><span class="math">&nabla;&sup2;f(x)</span> is positive definite for all <span class="math">x</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q2')">
+          <input type="radio" name="q2" value="b">
+          <span class="option-marker">B</span>
+          <span><span class="math">&nabla;&sup2;f(x)</span> is positive semidefinite for all <span class="math">x</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q2')">
+          <input type="radio" name="q2" value="c">
+          <span class="option-marker">C</span>
+          <span><span class="math">&nabla;&sup2;f(x)</span> is the identity matrix for all <span class="math">x</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q2')">
+          <input type="radio" name="q2" value="d">
+          <span class="option-marker">D</span>
+          <span><span class="math">&nabla;&sup2;f(x)</span> is negative semidefinite for all <span class="math">x</span></span>
+        </label>
+      </div>
+      <div class="feedback" id="q2-feedback"></div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="question-card" id="q3-card">
+      <div class="question-number">Question 3 <span class="lecture-tag">Lecture 4</span></div>
+      <div class="question-text">The first-order condition for convexity states that for a differentiable convex function <span class="math">f</span> on an open convex set <span class="math">S</span>, the tangent hyperplane at any point is a global underestimator: <span class="math">f(y) &ge; f(x) + &nabla;f(x)<sup>T</sup>(y &minus; x)</span> for all <span class="math">x, y &isin; S</span>. Which of the following operations always preserves convexity of functions?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q3')">
+          <input type="radio" name="q3" value="a">
+          <span class="option-marker">A</span>
+          <span>Composition of two convex functions <span class="math">f(g(x))</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q3')">
+          <input type="radio" name="q3" value="b">
+          <span class="option-marker">B</span>
+          <span>Product of two convex functions</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q3')">
+          <input type="radio" name="q3" value="c">
+          <span class="option-marker">C</span>
+          <span>Nonnegative weighted sum of convex functions</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q3')">
+          <input type="radio" name="q3" value="d">
+          <span class="option-marker">D</span>
+          <span>Negation of a convex function</span>
+        </label>
+      </div>
+      <div class="feedback" id="q3-feedback"></div>
+    </div>
+
+    <!-- Q4 -->
+    <div class="question-card" id="q4-card">
+      <div class="question-number">Question 4 <span class="lecture-tag">Lecture 5</span></div>
+      <div class="question-text">A vector <span class="math">&xi;</span> is a <em>subgradient</em> of a convex function <span class="math">f</span> at <span class="math">x&#x0304;</span> if <span class="math">f(x) &ge; f(x&#x0304;) + &xi;<sup>T</sup>(x &minus; x&#x0304;)</span> for all <span class="math">x &isin; S</span>. What is the subdifferential <span class="math">&part;f(0)</span> of <span class="math">f(x) = |x|</span> at <span class="math">x = 0</span>?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q4')">
+          <input type="radio" name="q4" value="a">
+          <span class="option-marker">A</span>
+          <span>{0}</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q4')">
+          <input type="radio" name="q4" value="b">
+          <span class="option-marker">B</span>
+          <span>{&minus;1, 1}</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q4')">
+          <input type="radio" name="q4" value="c">
+          <span class="option-marker">C</span>
+          <span>[&minus;1, 1] (the closed interval from &minus;1 to 1)</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q4')">
+          <input type="radio" name="q4" value="d">
+          <span class="option-marker">D</span>
+          <span>The empty set (no subgradient exists at the kink)</span>
+        </label>
+      </div>
+      <div class="feedback" id="q4-feedback"></div>
+    </div>
+
+    <!-- Q5 -->
+    <div class="question-card" id="q5-card">
+      <div class="question-number">Question 5 <span class="lecture-tag">Lecture 5</span></div>
+      <div class="question-text">A fundamental theorem in convex optimization states that for a convex function <span class="math">f</span> minimized over a convex set <span class="math">S</span>, every local minimum is also a global minimum. Why does this property fail for general nonconvex functions?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q5')">
+          <input type="radio" name="q5" value="a">
+          <span class="option-marker">A</span>
+          <span>Nonconvex functions are never continuous, so the Weierstrass theorem fails</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q5')">
+          <input type="radio" name="q5" value="b">
+          <span class="option-marker">B</span>
+          <span>The proof relies on convexity: if <span class="math">f</span> is convex, points on the line segment from <span class="math">x&#x0304;</span> to any <span class="math">x</span> have function values bounded by the convex combination, enabling extension from local to global optimality</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q5')">
+          <input type="radio" name="q5" value="c">
+          <span class="option-marker">C</span>
+          <span>Nonconvex functions do not have gradients, so optimality conditions cannot be applied</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q5')">
+          <input type="radio" name="q5" value="d">
+          <span class="option-marker">D</span>
+          <span>The property actually holds for all differentiable functions, not just convex ones</span>
+        </label>
+      </div>
+      <div class="feedback" id="q5-feedback"></div>
+    </div>
+
+    <!-- Q6 -->
+    <div class="question-card" id="q6-card">
+      <div class="question-number">Question 6 <span class="lecture-tag">Lecture 5</span></div>
+      <div class="question-text">For an unconstrained minimization of a convex function <span class="math">f</span> over <span class="math">&Ropf;<sup>n</sup></span>, which condition is both necessary and sufficient for <span class="math">x&#x0304;</span> to be a global minimizer?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q6')">
+          <input type="radio" name="q6" value="a">
+          <span class="option-marker">A</span>
+          <span><span class="math">&nabla;f(x&#x0304;) = 0</span> (only when <span class="math">f</span> is differentiable)</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q6')">
+          <input type="radio" name="q6" value="b">
+          <span class="option-marker">B</span>
+          <span><span class="math">0 &isin; &part;f(x&#x0304;)</span> (the zero vector is a subgradient of <span class="math">f</span> at <span class="math">x&#x0304;</span>)</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q6')">
+          <input type="radio" name="q6" value="c">
+          <span class="option-marker">C</span>
+          <span>The Hessian <span class="math">&nabla;&sup2;f(x&#x0304;)</span> is positive definite</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q6')">
+          <input type="radio" name="q6" value="d">
+          <span class="option-marker">D</span>
+          <span><span class="math">f(x&#x0304;) = 0</span></span>
+        </label>
+      </div>
+      <div class="feedback" id="q6-feedback"></div>
+    </div>
+
+    <!-- Q7 -->
+    <div class="question-card" id="q7-card">
+      <div class="question-number">Question 7 <span class="lecture-tag">Lecture 6</span></div>
+      <div class="question-text">The Lagrangian for the constrained problem min <span class="math">f(x)</span> s.t. <span class="math">g<sub>i</sub>(x) &le; 0</span>, <span class="math">h<sub>j</sub>(x) = 0</span> is defined as <span class="math">L(x, &lambda;, &nu;) = f(x) + &Sigma;&lambda;<sub>i</sub>g<sub>i</sub>(x) + &Sigma;&nu;<sub>j</sub>h<sub>j</sub>(x)</span>. The KKT <em>complementary slackness</em> condition requires <span class="math">&lambda;<sub>i</sub>g<sub>i</sub>(x&#x0304;) = 0</span> for all <span class="math">i</span>. What does this condition mean?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q7')">
+          <input type="radio" name="q7" value="a">
+          <span class="option-marker">A</span>
+          <span>All inequality constraints must be active at the optimal solution</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q7')">
+          <input type="radio" name="q7" value="b">
+          <span class="option-marker">B</span>
+          <span>All Lagrange multipliers must be zero</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q7')">
+          <input type="radio" name="q7" value="c">
+          <span class="option-marker">C</span>
+          <span>For each inequality constraint, either the constraint is active (<span class="math">g<sub>i</sub>(x&#x0304;) = 0</span>) or its multiplier is zero (<span class="math">&lambda;<sub>i</sub> = 0</span>), or both</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q7')">
+          <input type="radio" name="q7" value="d">
+          <span class="option-marker">D</span>
+          <span>The objective function value equals zero at the optimum</span>
+        </label>
+      </div>
+      <div class="feedback" id="q7-feedback"></div>
+    </div>
+
+    <!-- Q8 -->
+    <div class="question-card" id="q8-card">
+      <div class="question-number">Question 8 <span class="lecture-tag">Lecture 6</span></div>
+      <div class="question-text">Which of the following is a <strong>convex</strong> optimization problem?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q8')">
+          <input type="radio" name="q8" value="a">
+          <span class="option-marker">A</span>
+          <span>min <span class="math">x<sub>1</sub>x<sub>2</sub></span> s.t. <span class="math">x<sub>1</sub>&sup2; + x<sub>2</sub>&sup2; &le; 1</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q8')">
+          <input type="radio" name="q8" value="b">
+          <span class="option-marker">B</span>
+          <span>min <span class="math">e<sup>x<sub>1</sub></sup> + x<sub>2</sub>&sup2;</span> s.t. <span class="math">x<sub>1</sub>&sup2; + x<sub>2</sub>&sup2; = 1</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q8')">
+          <input type="radio" name="q8" value="c">
+          <span class="option-marker">C</span>
+          <span>min <span class="math">||Ax &minus; b||<sub>2</sub>&sup2;</span> s.t. <span class="math">x &ge; 0</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q8')">
+          <input type="radio" name="q8" value="d">
+          <span class="option-marker">D</span>
+          <span>min <span class="math">x<sub>1</sub>&sup2; + x<sub>2</sub>&sup2;</span> s.t. <span class="math">x<sub>1</sub>&sup2; + x<sub>2</sub>&sup2; = 4</span></span>
+        </label>
+      </div>
+      <div class="feedback" id="q8-feedback"></div>
+    </div>
+
+    <!-- Q9 -->
+    <div class="question-card" id="q9-card">
+      <div class="question-number">Question 9 <span class="lecture-tag">Lecture 6</span></div>
+      <div class="question-text">For a convex optimization problem satisfying a constraint qualification (e.g., Slater's condition), the KKT conditions are:</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q9')">
+          <input type="radio" name="q9" value="a">
+          <span class="option-marker">A</span>
+          <span>Necessary but not sufficient for optimality</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q9')">
+          <input type="radio" name="q9" value="b">
+          <span class="option-marker">B</span>
+          <span>Sufficient but not necessary for optimality</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q9')">
+          <input type="radio" name="q9" value="c">
+          <span class="option-marker">C</span>
+          <span>Both necessary and sufficient for optimality</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q9')">
+          <input type="radio" name="q9" value="d">
+          <span class="option-marker">D</span>
+          <span>Neither necessary nor sufficient without additional assumptions</span>
+        </label>
+      </div>
+      <div class="feedback" id="q9-feedback"></div>
+    </div>
+
+    <!-- Q10 -->
+    <div class="question-card" id="q10-card">
+      <div class="question-number">Question 10 <span class="lecture-tag">Lecture 7</span></div>
+      <div class="question-text">The Weak Duality Theorem states that for the primal optimal value <span class="math">p*</span> and dual optimal value <span class="math">d*</span>:</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q10')">
+          <input type="radio" name="q10" value="a">
+          <span class="option-marker">A</span>
+          <span><span class="math">d* = p*</span> always</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q10')">
+          <input type="radio" name="q10" value="b">
+          <span class="option-marker">B</span>
+          <span><span class="math">d* &le; p*</span> always (the dual optimal value is a lower bound on the primal optimal value)</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q10')">
+          <input type="radio" name="q10" value="c">
+          <span class="option-marker">C</span>
+          <span><span class="math">d* &ge; p*</span> always</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q10')">
+          <input type="radio" name="q10" value="d">
+          <span class="option-marker">D</span>
+          <span>There is no general relationship between <span class="math">d*</span> and <span class="math">p*</span></span>
+        </label>
+      </div>
+      <div class="feedback" id="q10-feedback"></div>
+    </div>
+
+    <!-- Q11 -->
+    <div class="question-card" id="q11-card">
+      <div class="question-number">Question 11 <span class="lecture-tag">Lecture 7</span></div>
+      <div class="question-text">Strong duality (<span class="math">d* = p*</span>) holds for convex problems under which additional condition?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q11')">
+          <input type="radio" name="q11" value="a">
+          <span class="option-marker">A</span>
+          <span>The objective function must be quadratic</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q11')">
+          <input type="radio" name="q11" value="b">
+          <span class="option-marker">B</span>
+          <span>Slater's condition: there exists a strictly feasible point (all inequality constraints satisfied with strict inequality)</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q11')">
+          <input type="radio" name="q11" value="c">
+          <span class="option-marker">C</span>
+          <span>The feasible set must be bounded</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q11')">
+          <input type="radio" name="q11" value="d">
+          <span class="option-marker">D</span>
+          <span>All constraints must be linear</span>
+        </label>
+      </div>
+      <div class="feedback" id="q11-feedback"></div>
+    </div>
+
+    <!-- Q12 -->
+    <div class="question-card" id="q12-card">
+      <div class="question-number">Question 12 <span class="lecture-tag">Lecture 7</span></div>
+      <div class="question-text">In the economic interpretation of duality, the optimal dual variable <span class="math">&lambda;<sub>i</sub>*</span> associated with constraint <span class="math">g<sub>i</sub>(x) &le; b<sub>i</sub></span> is called the <em>shadow price</em>. If <span class="math">&lambda;<sub>i</sub>* = 5</span> for a resource constraint, what does this mean?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q12')">
+          <input type="radio" name="q12" value="a">
+          <span class="option-marker">A</span>
+          <span>The constraint is inactive (slack), so relaxing it has no effect</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q12')">
+          <input type="radio" name="q12" value="b">
+          <span class="option-marker">B</span>
+          <span>Increasing the resource limit <span class="math">b<sub>i</sub></span> by one unit would decrease the optimal cost by approximately 5 units</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q12')">
+          <input type="radio" name="q12" value="c">
+          <span class="option-marker">C</span>
+          <span>The optimal solution uses exactly 5 units of resource <span class="math">i</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q12')">
+          <input type="radio" name="q12" value="d">
+          <span class="option-marker">D</span>
+          <span>The duality gap is equal to 5</span>
+        </label>
+      </div>
+      <div class="feedback" id="q12-feedback"></div>
+    </div>
+
+    <div class="submit-area">
+      <button type="button" class="btn-submit" id="submitBtn" onclick="submitQuiz()">Submit Quiz</button>
+    </div>
+
+    <div class="score-panel" id="scorePanel">
+      <h3>Quiz Complete</h3>
+      <div class="score-big" id="scorePercent">&mdash;</div>
+      <div class="score-detail" id="scoreDetail"></div>
+      <div class="score-bar-track">
+        <div class="score-bar-fill" id="scoreBar"></div>
+      </div>
+      <div class="score-message" id="scoreMessage"></div>
+      <div class="screenshot-note">
+        &#x1F4F8; <strong>Screenshot this page</strong> (including your score and answered questions) and submit it on Canvas.
+      </div>
+      <div class="timestamp" id="timestamp"></div>
+    </div>
+
+  </form>
+</div>
+
+<script>
+  // Answer key
+  const answerKey = {
+    q1:  { correct: 'b',
+           right: 'Correct! If a strictly convex function has a minimizer on a convex set, it must be unique. If two minimizers x\u2081 \u2260 x\u2082 existed, then f(0.5x\u2081 + 0.5x\u2082) < 0.5f(x\u2081) + 0.5f(x\u2082) = f(x\u2081), contradicting the assumption that x\u2081 is a minimizer.',
+           wrong: {
+             a: 'Incorrect. Strict convexity guarantees uniqueness\u2014if two distinct minimizers existed, the midpoint would have a strictly smaller function value, contradicting their minimality.',
+             c: 'Incorrect. Strict convexity guarantees uniqueness of a minimizer (if one exists), not existence itself. Existence requires additional conditions such as compactness of the domain (Weierstrass\u2019 Theorem).',
+             d: 'Incorrect. Strictly convex functions need not be differentiable. For example, f(x) = x\u00b2 + |x| is strictly convex but not differentiable at x = 0.'
+           }},
+    q2:  { correct: 'b',
+           right: 'Correct! The second-order condition states: f is convex on an open convex set if and only if \u2207\u00b2f(x) \u2ab0 0 (positive semidefinite) for all x. This means d\u1d40\u2207\u00b2f(x)d \u2265 0 for all vectors d. Note: positive definiteness (\u2207\u00b2f \u227b 0) is sufficient for strict convexity, but the condition for convexity is the weaker PSD condition.',
+           wrong: {
+             a: 'Incorrect. Positive definiteness (\u2207\u00b2f \u227b 0) is a sufficient condition for strict convexity, but the necessary and sufficient condition for convexity is the weaker condition of positive semidefiniteness (\u2207\u00b2f \u2ab0 0). For example, f(x) = 0 is convex with \u2207\u00b2f = 0, which is PSD but not PD.',
+             c: 'Incorrect. Requiring the Hessian to equal the identity is far too restrictive. The correct condition is that the Hessian is positive semidefinite, which allows any symmetric matrix with nonneg. eigenvalues.',
+             d: 'Incorrect. Negative semidefiniteness of the Hessian characterizes concavity, not convexity. A function is concave iff \u2207\u00b2f(x) \u2aaf 0 for all x.'
+           }},
+    q3:  { correct: 'c',
+           right: 'Correct! If f\u2081, ..., f\u2096 are convex and \u03b1\u2081, ..., \u03b1\u2096 \u2265 0, then \u03b1\u2081f\u2081 + ... + \u03b1\u2096f\u2096 is convex. This follows directly from the definition of convexity. This is one of the most frequently used convexity-preserving operations in the course.',
+           wrong: {
+             a: 'Incorrect. Composition of two convex functions is NOT always convex. For example, f(x) = x\u00b2 is convex and g(x) = x\u00b2 \u2212 1 is convex, but f(g(x)) = (x\u00b2 \u2212 1)\u00b2 is not convex. Additional conditions on monotonicity are needed.',
+             b: 'Incorrect. The product of two convex functions is not necessarily convex. For example, f(x) = x and g(x) = x are both convex on \u211d, but f(x) \u00b7 g(x) = x\u00b2 is convex only by coincidence\u2014in general the product can fail to be convex.',
+             d: 'Incorrect. The negation of a convex function is concave, not convex. If f is convex, then \u2212f is concave.'
+           }},
+    q4:  { correct: 'c',
+           right: 'Correct! At x = 0, any slope \u03be \u2208 [\u22121, 1] yields a supporting line that stays below |x|. For x > 0: x \u2265 \u03bex requires \u03be \u2264 1. For x < 0: \u2212x \u2265 \u03bex requires \u03be \u2265 \u22121. So the subdifferential is the entire closed interval [\u22121, 1].',
+           wrong: {
+             a: 'Incorrect. While \u03be = 0 is a valid subgradient at x = 0, it is not the only one. Every \u03be \u2208 [\u22121, 1] satisfies |x| \u2265 0 + \u03be \u00b7 x for all x, so the subdifferential is the full interval [\u22121, 1].',
+             b: 'Incorrect. The subdifferential is not just the two endpoints {\u22121, 1}\u2014it is the entire closed interval [\u22121, 1]. For example, \u03be = 0.5 also satisfies |x| \u2265 0.5x for all x.',
+             d: 'Incorrect. A fundamental theorem guarantees that a convex function has at least one subgradient at every interior point of its domain. At x = 0, the subdifferential of |x| is the interval [\u22121, 1], which is nonempty.'
+           }},
+    q5:  { correct: 'b',
+           right: 'Correct! The proof uses convexity directly: given a local minimizer x\u0304 and any feasible x, we construct a point y = (1\u2212\u03bb)x\u0304 + \u03bbx within the \u03b5-neighborhood, use local optimality to get f(x\u0304) \u2264 f(y), then apply convexity f(y) \u2264 (1\u2212\u03bb)f(x\u0304) + \u03bbf(x) to conclude f(x\u0304) \u2264 f(x). Without convexity, this chain of inequalities breaks.',
+           wrong: {
+             a: 'Incorrect. Many nonconvex functions are continuous (e.g., f(x) = sin(x)), so this is not the reason. The key is that convexity of f allows us to bound f along line segments, which is essential for extending local to global optimality.',
+             c: 'Incorrect. Many nonconvex functions are differentiable (e.g., f(x) = \u2212x\u00b2, which is smooth but concave). The local-to-global result depends on convexity of f, not differentiability.',
+             d: 'Incorrect. This is false\u2014consider f(x) = sin(x), which is differentiable and has infinitely many local minima that are not global minima. The local-implies-global property is specific to convex functions on convex domains.'
+           }},
+    q6:  { correct: 'b',
+           right: 'Correct! For unconstrained minimization of a convex function, 0 \u2208 \u2202f(x\u0304) is both necessary and sufficient for x\u0304 to be a global minimizer. This generalizes the familiar \u2207f(x\u0304) = 0 condition to non-differentiable convex functions. When f is differentiable, \u2202f(x\u0304) = {\u2207f(x\u0304)}, so this reduces to \u2207f(x\u0304) = 0.',
+           wrong: {
+             a: 'Incorrect. While \u2207f(x\u0304) = 0 is correct for differentiable convex functions, it does not apply to non-differentiable convex functions like f(x) = |x|. The general condition is 0 \u2208 \u2202f(x\u0304), which reduces to \u2207f = 0 when f is differentiable.',
+             c: 'Incorrect. Positive definiteness of the Hessian is a sufficient condition for x\u0304 to be a strict local minimizer (for twice-differentiable functions), but it is neither necessary for optimality nor applicable to non-smooth convex functions. The correct condition is 0 \u2208 \u2202f(x\u0304).',
+             d: 'Incorrect. The value f(x\u0304) = 0 has nothing to do with optimality. A function can attain its minimum at any value. The optimality condition concerns the subgradients (slopes), not the function value.'
+           }},
+    q7:  { correct: 'c',
+           right: 'Correct! Complementary slackness \u03bb\u1d62g\u1d62(x\u0304) = 0 means that for each inequality constraint, at least one of the two factors must be zero. If the constraint is inactive (g\u1d62(x\u0304) < 0), then \u03bb\u1d62 must be zero\u2014inactive constraints don\u2019t affect the optimum. If \u03bb\u1d62 > 0, the constraint must be active (g\u1d62(x\u0304) = 0).',
+           wrong: {
+             a: 'Incorrect. Complementary slackness does NOT require all constraints to be active. It allows inactive constraints as long as their multiplier is zero. Only active constraints can have positive multipliers.',
+             b: 'Incorrect. Multipliers are allowed to be positive for active constraints. If g\u1d62(x\u0304) = 0 (constraint is active), the multiplier \u03bb\u1d62 can be (and often is) positive. Only for inactive constraints must \u03bb\u1d62 = 0.',
+             d: 'Incorrect. Complementary slackness is a relationship between the Lagrange multipliers \u03bb\u1d62 and the constraint slack g\u1d62(x\u0304). It says nothing about the objective function value being zero.'
+           }},
+    q8:  { correct: 'c',
+           right: 'Correct! \u2016Ax \u2212 b\u2016\u00b2 is a convex quadratic in x, and the constraints \u2212x\u1d62 \u2264 0 are affine (hence convex). This satisfies all requirements: convex objective, convex inequality constraints, and no nonlinear equality constraints. This is a nonnegative least squares problem.',
+           wrong: {
+             a: 'Incorrect. The objective f(x) = x\u2081x\u2082 has an indefinite Hessian (eigenvalues +1 and \u22121), so it is neither convex nor concave. A convex optimization problem requires a convex objective.',
+             b: 'Incorrect. While the objective e^(x\u2081) + x\u2082\u00b2 is convex, the equality constraint x\u2081\u00b2 + x\u2082\u00b2 = 1 is NOT affine. For a problem to be convex, equality constraints must be affine (of the form a\u1d40x = b).',
+             d: 'Incorrect. The equality constraint x\u2081\u00b2 + x\u2082\u00b2 = 4 is NOT affine\u2014it defines a circle, not a hyperplane. Convex optimization requires equality constraints to be affine.'
+           }},
+    q9:  { correct: 'c',
+           right: 'Correct! This is a cornerstone result of convex optimization. For convex problems with a constraint qualification (such as Slater\u2019s condition), the KKT conditions are both necessary and sufficient for global optimality. This means that checking the KKT conditions is equivalent to verifying optimality\u2014a powerful result that does not hold for general nonconvex problems.',
+           wrong: {
+             a: 'Incorrect. For convex problems with constraint qualification, KKT conditions are both necessary and sufficient. It is only for general nonconvex problems that KKT conditions are merely necessary (under a CQ) but not sufficient.',
+             b: 'Incorrect. For convex problems, KKT conditions are sufficient (any KKT point is optimal), but they are also necessary under a constraint qualification. So both directions hold.',
+             d: 'Incorrect. The convexity of the problem plus a constraint qualification makes KKT conditions both necessary and sufficient. This is one of the most important results in convex optimization theory.'
+           }},
+    q10: { correct: 'b',
+           right: 'Correct! Weak duality states d* \u2264 p*, meaning the dual optimal value provides a lower bound on the primal optimal value. This holds for ANY optimization problem (convex or not). The proof follows because the dual function g(\u03bb, \u03bd) \u2264 f(x) for any feasible x and any dual feasible (\u03bb, \u03bd), by the nonnegativity of \u03bb and feasibility of x.',
+           wrong: {
+             a: 'Incorrect. d* = p* (zero duality gap) is the statement of strong duality, which requires additional conditions (e.g., convexity + Slater\u2019s condition). Weak duality only gives d* \u2264 p*, and the gap can be strictly positive in general.',
+             c: 'Incorrect. You have the direction reversed. The dual provides a lower bound, not an upper bound. For a minimization problem, d* \u2264 p*. (For a maximization primal, the dual gives an upper bound.)',
+             d: 'Incorrect. Weak duality always guarantees d* \u2264 p*. This is a universal result that holds for any optimization problem with a Lagrangian dual, regardless of convexity.'
+           }},
+    q11: { correct: 'b',
+           right: 'Correct! Slater\u2019s condition is the standard constraint qualification for strong duality in convex optimization. It requires the existence of a point x\u0303 that strictly satisfies all inequality constraints: g\u1d62(x\u0303) < 0 for all i (and satisfies equality constraints h\u2c7c(x\u0303) = 0). Under Slater\u2019s condition, the duality gap vanishes and optimal multipliers exist.',
+           wrong: {
+             a: 'Incorrect. Strong duality does not require a quadratic objective. It holds for general convex problems (with any convex objective) as long as a constraint qualification like Slater\u2019s condition is satisfied.',
+             c: 'Incorrect. Boundedness of the feasible set is not needed for strong duality. Slater\u2019s condition (existence of a strictly feasible point) is the standard requirement. Many unbounded feasible sets satisfy Slater\u2019s condition.',
+             d: 'Incorrect. While strong duality always holds for LPs (which have linear constraints), the general condition for convex problems is Slater\u2019s condition, which allows nonlinear convex constraints as long as they are strictly satisfiable.'
+           }},
+    q12: { correct: 'b',
+           right: 'Correct! The shadow price \u03bb\u1d62* \u2248 \u2202p*/\u2202b\u1d62 measures the rate of change of the optimal value with respect to the constraint bound. A shadow price of 5 means each additional unit of resource i decreases the optimal cost by approximately 5 units. This is invaluable for sensitivity analysis and resource allocation decisions.',
+           wrong: {
+             a: 'Incorrect. A positive shadow price (\u03bb\u1d62* = 5 > 0) indicates the constraint IS active (binding), not inactive. By complementary slackness, \u03bb\u1d62* > 0 implies g\u1d62(x*) = 0. An inactive constraint would have \u03bb\u1d62* = 0.',
+             c: 'Incorrect. The shadow price does not indicate how much of a resource is used. It indicates the marginal value of relaxing the constraint\u2014how much the optimal objective changes per unit increase in the resource bound b\u1d62.',
+             d: 'Incorrect. The shadow price is the value of the dual variable, not the duality gap. The duality gap is p* \u2212 d*, which equals zero under strong duality. The shadow price tells us about the sensitivity of p* to changes in the constraint bounds.'
+           }}
+  };
+
+  let submitted = false;
+
+  function selectOption(label, qName) {
+    if (submitted) return;
+    const card = label.closest('.question-card');
+    card.querySelectorAll('.option-label').forEach(l => l.classList.remove('selected'));
+    label.classList.add('selected');
+    label.querySelector('input').checked = true;
+  }
+
+  function submitQuiz() {
+    if (submitted) return;
+
+    // Check all answered
+    const totalQ = Object.keys(answerKey).length;
+    let answered = 0;
+    let score = 0;
+
+    for (const qName of Object.keys(answerKey)) {
+      const selected = document.querySelector(`input[name="${qName}"]:checked`);
+      if (selected) answered++;
+    }
+
+    if (answered < totalQ) {
+      alert(`Please answer all ${totalQ} questions before submitting. You have answered ${answered} of ${totalQ}.`);
+      return;
+    }
+
+    submitted = true;
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('submitBtn').textContent = 'Submitted';
+
+    // Grade and show feedback
+    for (const qName of Object.keys(answerKey)) {
+      const selected = document.querySelector(`input[name="${qName}"]:checked`);
+      const selectedValue = selected.value;
+      const correctValue = answerKey[qName].correct;
+      const feedbackEl = document.getElementById(`${qName}-feedback`);
+      const card = document.getElementById(`${qName}-card`);
+      const allLabels = card.querySelectorAll('.option-label');
+
+      // Disable all options
+      allLabels.forEach(l => {
+        l.classList.add('disabled');
+        l.onclick = null;
+      });
+
+      if (selectedValue === correctValue) {
+        score++;
+        selected.closest('.option-label').classList.add('correct-answer');
+        feedbackEl.className = 'feedback correct';
+        feedbackEl.innerHTML = `<span class="feedback-icon">\u2713</span> ${answerKey[qName].right}`;
+      } else {
+        selected.closest('.option-label').classList.add('incorrect-answer');
+        feedbackEl.className = 'feedback incorrect';
+        feedbackEl.innerHTML = `<span class="feedback-icon">\u2717</span> ${answerKey[qName].wrong[selectedValue]}`;
+      }
+      feedbackEl.style.display = 'block';
+    }
+
+    // Show score
+    const pct = Math.round((score / totalQ) * 100);
+    document.getElementById('scorePercent').textContent = `${pct}%`;
+    document.getElementById('scoreDetail').textContent = `${score} out of ${totalQ} correct`;
+
+    const bar = document.getElementById('scoreBar');
+    bar.classList.remove('high', 'mid', 'low');
+    if (pct >= 70) bar.classList.add('high');
+    else if (pct >= 50) bar.classList.add('mid');
+    else bar.classList.add('low');
+    setTimeout(() => { bar.style.width = `${pct}%`; }, 100);
+
+    let msg = '';
+    if (pct === 100) msg = 'Perfect score! Outstanding command of the material.';
+    else if (pct >= 80) msg = 'Great job! You have a solid understanding of convex functions, KKT conditions, and duality theory.';
+    else if (pct >= 60) msg = 'Good effort. Review the feedback above to strengthen your understanding of the concepts you missed.';
+    else msg = 'You may want to revisit Lectures 4\u20137 and review the key definitions and theorems. The feedback above highlights the areas to focus on.';
+    document.getElementById('scoreMessage').textContent = msg;
+
+    const now = new Date();
+    document.getElementById('timestamp').textContent = `Completed: ${now.toLocaleString()}`;
+
+    const panel = document.getElementById('scorePanel');
+    panel.style.display = 'block';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+</script>
+
+</body>
+</html>
