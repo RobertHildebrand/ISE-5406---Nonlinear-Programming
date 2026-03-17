@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISE 5406 — Quiz: Lectures 8–9</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --maroon: #861F41;
+    --burnt-orange: #E87722;
+    --cream: #FAF8F4;
+    --dark: #1a1a1a;
+    --mid: #4a4a4a;
+    --light-border: #e0dcd6;
+    --correct-bg: #e8f5e9;
+    --correct-border: #43a047;
+    --correct-text: #2e7d32;
+    --incorrect-bg: #fce4ec;
+    --incorrect-border: #e53935;
+    --incorrect-text: #c62828;
+    --info-bg: #e3f2fd;
+    --info-border: #1976d2;
+    --info-text: #0d47a1;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--cream);
+    color: var(--dark);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* Header bar */
+  .header {
+    background: var(--maroon);
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+  .header-badge {
+    background: var(--burnt-orange);
+    color: white;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 500;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .header h1 {
+    font-family: 'Source Serif 4', serif;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .header-sub {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.85rem;
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  /* Main container */
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  .intro {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    padding: 1.5rem 1rem;
+    border-bottom: 2px solid var(--light-border);
+  }
+  .intro h2 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--maroon);
+    margin-bottom: 0.5rem;
+  }
+  .intro p {
+    color: var(--mid);
+    font-size: 0.95rem;
+  }
+
+  /* Question card */
+  .question-card {
+    background: white;
+    border: 1px solid var(--light-border);
+    border-radius: 10px;
+    padding: 1.8rem 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    transition: box-shadow 0.3s;
+  }
+  .question-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.07); }
+
+  .question-number {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--burnt-orange);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.75rem;
+  }
+  .question-number .lecture-tag {
+    background: rgba(134,31,65,0.08);
+    color: var(--maroon);
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.7rem;
+  }
+
+  .question-text {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.12rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 1.2rem;
+    line-height: 1.5;
+  }
+
+  /* Options */
+  .options { display: flex; flex-direction: column; gap: 0.5rem; }
+
+  .option-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border: 2px solid var(--light-border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  .option-label:hover {
+    border-color: var(--maroon);
+    background: rgba(134,31,65,0.03);
+  }
+  .option-label input { display: none; }
+
+  .option-marker {
+    flex-shrink: 0;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 2px solid #c0bbb5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #8a8580;
+    transition: all 0.2s;
+    margin-top: 1px;
+  }
+  .option-label:hover .option-marker {
+    border-color: var(--maroon);
+    color: var(--maroon);
+  }
+
+  .option-label.selected {
+    border-color: var(--maroon);
+    background: rgba(134,31,65,0.06);
+  }
+  .option-label.selected .option-marker {
+    background: var(--maroon);
+    border-color: var(--maroon);
+    color: white;
+  }
+
+  /* Answered states */
+  .option-label.correct-answer {
+    border-color: var(--correct-border) !important;
+    background: var(--correct-bg) !important;
+  }
+  .option-label.correct-answer .option-marker {
+    background: var(--correct-border);
+    border-color: var(--correct-border);
+    color: white;
+  }
+  .option-label.incorrect-answer {
+    border-color: var(--incorrect-border) !important;
+    background: var(--incorrect-bg) !important;
+  }
+  .option-label.incorrect-answer .option-marker {
+    background: var(--incorrect-border);
+    border-color: var(--incorrect-border);
+    color: white;
+  }
+  .option-label.disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+  .option-label.disabled:hover {
+    border-color: var(--light-border);
+    background: transparent;
+  }
+
+  /* Feedback */
+  .feedback {
+    margin-top: 1rem;
+    padding: 1rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    display: none;
+    animation: fadeSlideIn 0.35s ease;
+  }
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .feedback.correct {
+    background: var(--correct-bg);
+    border-left: 4px solid var(--correct-border);
+    color: var(--correct-text);
+  }
+  .feedback.incorrect {
+    background: var(--incorrect-bg);
+    border-left: 4px solid var(--incorrect-border);
+    color: var(--incorrect-text);
+  }
+  .feedback-icon { font-weight: 700; margin-right: 0.3rem; }
+
+  /* Submit & Score */
+  .submit-area {
+    text-align: center;
+    margin-top: 2.5rem;
+  }
+  .btn-submit {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    background: var(--maroon);
+    color: white;
+    border: none;
+    padding: 0.9rem 3rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .btn-submit:hover { background: #6e1835; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(134,31,65,0.3); }
+  .btn-submit:active { transform: translateY(0); }
+  .btn-submit:disabled {
+    background: #b0a8a0;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Score panel */
+  .score-panel {
+    display: none;
+    margin-top: 2rem;
+    background: white;
+    border: 2px solid var(--maroon);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    animation: fadeSlideIn 0.5s ease;
+  }
+  .score-panel h3 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.3rem;
+    color: var(--maroon);
+    margin-bottom: 0.75rem;
+  }
+  .score-big {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: var(--maroon);
+    margin: 0.5rem 0;
+  }
+  .score-detail {
+    color: var(--mid);
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+  }
+  .score-bar-track {
+    width: 100%;
+    height: 12px;
+    background: #ece8e3;
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 1rem 0 1.5rem;
+  }
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 1s ease;
+    width: 0%;
+  }
+  .score-bar-fill.high { background: var(--correct-border); }
+  .score-bar-fill.mid { background: var(--burnt-orange); }
+  .score-bar-fill.low { background: var(--incorrect-border); }
+
+  .score-message {
+    font-size: 0.95rem;
+    color: var(--mid);
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+  }
+
+  .screenshot-note {
+    background: var(--info-bg);
+    border: 1px solid var(--info-border);
+    color: var(--info-text);
+    padding: 0.8rem 1rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .timestamp {
+    margin-top: 0.75rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--mid);
+  }
+
+  /* Math-like styling for inline formulas */
+  .math {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+  }
+  code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.88em;
+    background: rgba(0,0,0,0.04);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .header { flex-wrap: wrap; padding: 1rem; }
+    .header h1 { font-size: 1.2rem; }
+    .header-sub { margin-left: 0; width: 100%; font-size: 0.8rem; }
+    .container { padding: 1.2rem 1rem 3rem; }
+    .question-card { padding: 1.3rem 1.2rem; }
+    .score-big { font-size: 2.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-badge">Quiz</span>
+  <h1>ISE 5406: Optimization II</h1>
+  <span class="header-sub">Lectures 8–9 &middot; Spring 2026</span>
+</div>
+
+<div class="container">
+  <div class="intro">
+    <h2>Lectures 8–9 Comprehension Check</h2>
+    <p>Select the best answer for each question, then click <strong>Submit Quiz</strong> to see your score.<br>
+    After submitting, screenshot your results and submit on Canvas.</p>
+  </div>
+
+  <form id="quizForm" onsubmit="return false;">
+
+    <!-- Q1 -->
+    <div class="question-card" id="q1-card">
+      <div class="question-number">Question 1 <span class="lecture-tag">Lecture 8</span></div>
+      <div class="question-text">A function <span class="math">f</span> is <em>quasiconvex</em> on a convex set <span class="math">X</span> if it satisfies which of the following inequalities for any <span class="math">x<sub>1</sub>, x<sub>2</sub> &isin; X</span> and <span class="math">&lambda; &isin; (0, 1)</span>?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q1')">
+          <input type="radio" name="q1" value="a">
+          <span class="option-marker">A</span>
+          <span><span class="math">f(&lambda;x<sub>1</sub> + (1&minus;&lambda;)x<sub>2</sub>) &le; &lambda;f(x<sub>1</sub>) + (1&minus;&lambda;)f(x<sub>2</sub>)</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q1')">
+          <input type="radio" name="q1" value="b">
+          <span class="option-marker">B</span>
+          <span><span class="math">f(&lambda;x<sub>1</sub> + (1&minus;&lambda;)x<sub>2</sub>) &le; max{f(x<sub>1</sub>), f(x<sub>2</sub>)}</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q1')">
+          <input type="radio" name="q1" value="c">
+          <span class="option-marker">C</span>
+          <span>The level sets <span class="math">S<sub>&alpha;</sub> = {x: f(x) &le; &alpha;}</span> are unbounded for all <span class="math">&alpha;</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q1')">
+          <input type="radio" name="q1" value="d">
+          <span class="option-marker">D</span>
+          <span><span class="math">&nabla;f(x) = 0</span> implies <span class="math">x</span> is a global minimizer</span>
+        </label>
+      </div>
+      <div class="feedback" id="q1-feedback"></div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="question-card" id="q2-card">
+      <div class="question-number">Question 2 <span class="lecture-tag">Lecture 8</span></div>
+      <div class="question-text">Which of the following statements correctly characterizes a quasiconvex function via its level sets?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q2')">
+          <input type="radio" name="q2" value="a">
+          <span class="option-marker">A</span>
+          <span><span class="math">f</span> is quasiconvex if and only if every <em>upper</em> level set <span class="math">U<sub>&alpha;</sub> = {x: f(x) &ge; &alpha;}</span> is convex</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q2')">
+          <input type="radio" name="q2" value="b">
+          <span class="option-marker">B</span>
+          <span><span class="math">f</span> is quasiconvex if and only if every <em>lower</em> level set <span class="math">S<sub>&alpha;</sub> = {x: f(x) &le; &alpha;}</span> is convex</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q2')">
+          <input type="radio" name="q2" value="c">
+          <span class="option-marker">C</span>
+          <span>Quasiconvexity requires all level sets to be bounded closed intervals</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q2')">
+          <input type="radio" name="q2" value="d">
+          <span class="option-marker">D</span>
+          <span>Quasiconvexity requires all level sets to be open sets</span>
+        </label>
+      </div>
+      <div class="feedback" id="q2-feedback"></div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="question-card" id="q3-card">
+      <div class="question-number">Question 3 <span class="lecture-tag">Lecture 8</span></div>
+      <div class="question-text">When <em>maximizing</em> a convex function over a nonempty compact polyhedral set (defined by linear constraints), at what type of point must an optimal solution occur?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q3')">
+          <input type="radio" name="q3" value="a">
+          <span class="option-marker">A</span>
+          <span>At an extreme point (vertex) of the feasible region</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q3')">
+          <input type="radio" name="q3" value="b">
+          <span class="option-marker">B</span>
+          <span>At an interior point of the feasible region</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q3')">
+          <input type="radio" name="q3" value="c">
+          <span class="option-marker">C</span>
+          <span>At the geometric center of mass of the feasible region</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q3')">
+          <input type="radio" name="q3" value="d">
+          <span class="option-marker">D</span>
+          <span>At the midpoint of the longest edge of the feasible region</span>
+        </label>
+      </div>
+      <div class="feedback" id="q3-feedback"></div>
+    </div>
+
+    <!-- Q4 -->
+    <div class="question-card" id="q4-card">
+      <div class="question-number">Question 4 <span class="lecture-tag">Lecture 8</span></div>
+      <div class="question-text">A key property of <em>strictly quasiconvex</em> functions in unconstrained minimization is:</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q4')">
+          <input type="radio" name="q4" value="a">
+          <span class="option-marker">A</span>
+          <span>Every global minimizer is unique</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q4')">
+          <input type="radio" name="q4" value="b">
+          <span class="option-marker">B</span>
+          <span>Every local minimum is also a global minimum</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q4')">
+          <input type="radio" name="q4" value="c">
+          <span class="option-marker">C</span>
+          <span>Every stationary point (where <span class="math">&nabla;f = 0</span>) is a global minimizer</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q4')">
+          <input type="radio" name="q4" value="d">
+          <span class="option-marker">D</span>
+          <span>The function must be continuously differentiable</span>
+        </label>
+      </div>
+      <div class="feedback" id="q4-feedback"></div>
+    </div>
+
+    <!-- Q5 -->
+    <div class="question-card" id="q5-card">
+      <div class="question-number">Question 5 <span class="lecture-tag">Lecture 8</span></div>
+      <div class="question-text">What additional property does a <em>strongly quasiconvex</em> function guarantee compared to a merely strictly quasiconvex function?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q5')">
+          <input type="radio" name="q5" value="a">
+          <span class="option-marker">A</span>
+          <span>Continuous differentiability everywhere</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q5')">
+          <input type="radio" name="q5" value="b">
+          <span class="option-marker">B</span>
+          <span>Uniqueness of the global minimum (when one exists)</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q5')">
+          <input type="radio" name="q5" value="c">
+          <span class="option-marker">C</span>
+          <span>Boundedness of all level sets</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q5')">
+          <input type="radio" name="q5" value="d">
+          <span class="option-marker">D</span>
+          <span>The Hessian matrix is positive definite everywhere</span>
+        </label>
+      </div>
+      <div class="feedback" id="q5-feedback"></div>
+    </div>
+
+    <!-- Q6 -->
+    <div class="question-card" id="q6-card">
+      <div class="question-number">Question 6 <span class="lecture-tag">Lecture 8</span></div>
+      <div class="question-text">A function <span class="math">f</span> is <span class="math">&mu;</span>-strongly convex (where <span class="math">&mu; > 0</span>) if its Hessian satisfies which condition at every point?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q6')">
+          <input type="radio" name="q6" value="a">
+          <span class="option-marker">A</span>
+          <span><span class="math">&nabla;&sup2;f(x) = 2&mu;I</span> (exactly equal to <span class="math">2&mu;</span> times the identity)</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q6')">
+          <input type="radio" name="q6" value="b">
+          <span class="option-marker">B</span>
+          <span><span class="math">&nabla;&sup2;f(x) &minus; 2&mu;I</span> is positive semidefinite (i.e., <span class="math">&nabla;&sup2;f(x) &#x2AB0; 2&mu;I</span>)</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q6')">
+          <input type="radio" name="q6" value="c">
+          <span class="option-marker">C</span>
+          <span>det(<span class="math">&nabla;&sup2;f(x)</span>) <span class="math">&ge; 2&mu;</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q6')">
+          <input type="radio" name="q6" value="d">
+          <span class="option-marker">D</span>
+          <span>trace(<span class="math">&nabla;&sup2;f(x)</span>) <span class="math">&ge; 2&mu;</span></span>
+        </label>
+      </div>
+      <div class="feedback" id="q6-feedback"></div>
+    </div>
+
+    <!-- Q7 -->
+    <div class="question-card" id="q7-card">
+      <div class="question-number">Question 7 <span class="lecture-tag">Lecture 8</span></div>
+      <div class="question-text">A <em>pseudoconvex</em> function possesses which of the following key properties?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q7')">
+          <input type="radio" name="q7" value="a">
+          <span class="option-marker">A</span>
+          <span>Every stationary point (where <span class="math">&nabla;f = 0</span>) is a global minimizer</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q7')">
+          <input type="radio" name="q7" value="b">
+          <span class="option-marker">B</span>
+          <span>The Hessian is positive semidefinite everywhere</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q7')">
+          <input type="radio" name="q7" value="c">
+          <span class="option-marker">C</span>
+          <span>The function must be convex</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q7')">
+          <input type="radio" name="q7" value="d">
+          <span class="option-marker">D</span>
+          <span>Every local maximum is also a global maximum</span>
+        </label>
+      </div>
+      <div class="feedback" id="q7-feedback"></div>
+    </div>
+
+    <!-- Q8 -->
+    <div class="question-card" id="q8-card">
+      <div class="question-number">Question 8 <span class="lecture-tag">Lecture 9</span></div>
+      <div class="question-text">What is the definition of a <em>descent direction</em> <span class="math">d</span> at a point <span class="math">x&#x0304;</span>?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q8')">
+          <input type="radio" name="q8" value="a">
+          <span class="option-marker">A</span>
+          <span><span class="math">&nabla;f(x&#x0304;)<sup>T</sup>d &lt; 0</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q8')">
+          <input type="radio" name="q8" value="b">
+          <span class="option-marker">B</span>
+          <span><span class="math">&nabla;f(x&#x0304;)<sup>T</sup>d &gt; 0</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q8')">
+          <input type="radio" name="q8" value="c">
+          <span class="option-marker">C</span>
+          <span><span class="math">&nabla;f(x&#x0304;)<sup>T</sup>d = 0</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q8')">
+          <input type="radio" name="q8" value="d">
+          <span class="option-marker">D</span>
+          <span><span class="math">||d|| &lt; ||&nabla;f(x&#x0304;)||</span></span>
+        </label>
+      </div>
+      <div class="feedback" id="q8-feedback"></div>
+    </div>
+
+    <!-- Q9 -->
+    <div class="question-card" id="q9-card">
+      <div class="question-number">Question 9 <span class="lecture-tag">Lecture 9</span></div>
+      <div class="question-text">What condition do the second-order <em>necessary</em> conditions (SONC) require at a local minimum <span class="math">x*</span> of a twice-differentiable function?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q9')">
+          <input type="radio" name="q9" value="a">
+          <span class="option-marker">A</span>
+          <span><span class="math">&nabla;f(x*) = 0</span> only</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q9')">
+          <input type="radio" name="q9" value="b">
+          <span class="option-marker">B</span>
+          <span><span class="math">&nabla;f(x*) = 0</span> AND <span class="math">&nabla;&sup2;f(x*)</span> is positive semidefinite</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q9')">
+          <input type="radio" name="q9" value="c">
+          <span class="option-marker">C</span>
+          <span><span class="math">&nabla;f(x*) = 0</span> AND <span class="math">&nabla;&sup2;f(x*)</span> is positive definite</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q9')">
+          <input type="radio" name="q9" value="d">
+          <span class="option-marker">D</span>
+          <span><span class="math">&nabla;f(x*) = 0</span> AND <span class="math">&nabla;&sup2;f(x*)</span> is negative semidefinite</span>
+        </label>
+      </div>
+      <div class="feedback" id="q9-feedback"></div>
+    </div>
+
+    <!-- Q10 -->
+    <div class="question-card" id="q10-card">
+      <div class="question-number">Question 10 <span class="lecture-tag">Lecture 9</span></div>
+      <div class="question-text">How do the second-order <em>sufficient</em> conditions (SOSC) for a strict local minimum differ from the <em>necessary</em> conditions?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q10')">
+          <input type="radio" name="q10" value="a">
+          <span class="option-marker">A</span>
+          <span>The sufficient conditions require <span class="math">&nabla;f</span> to be nonzero</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q10')">
+          <input type="radio" name="q10" value="b">
+          <span class="option-marker">B</span>
+          <span>The sufficient conditions require the Hessian to be positive <em>definite</em> (not just semidefinite), while necessary conditions only require positive semidefinite</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q10')">
+          <input type="radio" name="q10" value="c">
+          <span class="option-marker">C</span>
+          <span>The sufficient conditions require the function to be convex everywhere</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q10')">
+          <input type="radio" name="q10" value="d">
+          <span class="option-marker">D</span>
+          <span>The sufficient conditions require a third derivative test</span>
+        </label>
+      </div>
+      <div class="feedback" id="q10-feedback"></div>
+    </div>
+
+    <!-- Q11 -->
+    <div class="question-card" id="q11-card">
+      <div class="question-number">Question 11 <span class="lecture-tag">Lecture 9</span></div>
+      <div class="question-text">In golden section search, what is the reduction ratio for the interval at each iteration?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q11')">
+          <input type="radio" name="q11" value="a">
+          <span class="option-marker">A</span>
+          <span>&alpha; = 0.5</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q11')">
+          <input type="radio" name="q11" value="b">
+          <span class="option-marker">B</span>
+          <span>&alpha; &approx; 0.618 (the golden ratio)</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q11')">
+          <input type="radio" name="q11" value="c">
+          <span class="option-marker">C</span>
+          <span>&alpha; = 0.75</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q11')">
+          <input type="radio" name="q11" value="d">
+          <span class="option-marker">D</span>
+          <span>The ratio depends on the specific function and cannot be predetermined</span>
+        </label>
+      </div>
+      <div class="feedback" id="q11-feedback"></div>
+    </div>
+
+    <!-- Q12 -->
+    <div class="question-card" id="q12-card">
+      <div class="question-number">Question 12 <span class="lecture-tag">Lecture 9</span></div>
+      <div class="question-text">What is the key computational advantage of golden section search compared to dichotomous search?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q12')">
+          <input type="radio" name="q12" value="a">
+          <span class="option-marker">A</span>
+          <span>Golden section search achieves a faster convergence rate</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q12')">
+          <input type="radio" name="q12" value="b">
+          <span class="option-marker">B</span>
+          <span>Only one new function evaluation is required per iteration (reuses a point from the previous iteration), whereas dichotomous requires two</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q12')">
+          <input type="radio" name="q12" value="c">
+          <span class="option-marker">C</span>
+          <span>Golden section search uses derivative information, while dichotomous search does not</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q12')">
+          <input type="radio" name="q12" value="d">
+          <span class="option-marker">D</span>
+          <span>Golden section search works for non-quasiconvex functions, while dichotomous only works for quasiconvex functions</span>
+        </label>
+      </div>
+      <div class="feedback" id="q12-feedback"></div>
+    </div>
+
+    <div class="submit-area">
+      <button type="button" class="btn-submit" id="submitBtn" onclick="submitQuiz()">Submit Quiz</button>
+    </div>
+
+    <div class="score-panel" id="scorePanel">
+      <h3>Quiz Complete</h3>
+      <div class="score-big" id="scorePercent">&mdash;</div>
+      <div class="score-detail" id="scoreDetail"></div>
+      <div class="score-bar-track">
+        <div class="score-bar-fill" id="scoreBar"></div>
+      </div>
+      <div class="score-message" id="scoreMessage"></div>
+      <div class="screenshot-note">
+        &#x1F4F8; <strong>Screenshot this page</strong> (including your score and answered questions) and submit it on Canvas.
+      </div>
+      <div class="timestamp" id="timestamp"></div>
+    </div>
+
+  </form>
+</div>
+
+<script>
+  // Answer key
+  const answerKey = {
+    q1:  { correct: 'b',
+           right: 'Correct! The defining inequality for quasiconvexity is f(\u03bbx\u2081 + (1\u2212\u03bb)x\u2082) \u2264 max{f(x\u2081), f(x\u2082)}. This says the function value at a convex combination cannot exceed the maximum of the function values at the endpoints. This is a weaker condition than convexity, which requires f(\u03bbx\u2081 + (1\u2212\u03bb)x\u2082) \u2264 \u03bbf(x\u2081) + (1\u2212\u03bb)f(x\u2082).',
+           wrong: {
+             a: 'Incorrect. That is the defining inequality for convexity, not quasiconvexity. Convexity is a stronger condition than quasiconvexity.',
+             c: 'Incorrect. Level sets being unbounded is not related to quasiconvexity. Quasiconvexity characterizes the shape of level sets (they must be convex), not their boundedness.',
+             d: 'Incorrect. The property that \u2207f(x) = 0 implies global minimality is specific to pseudoconvex functions, not quasiconvex functions.'
+           }},
+    q2:  { correct: 'b',
+           right: 'Correct! A fundamental characterization theorem states: f is quasiconvex if and only if every lower level set S_\u03b1 = {x: f(x) \u2264 \u03b1} is convex for all \u03b1. This is because on each convex set (the level set), the function stays within its range, giving the convex combination bound.',
+           wrong: {
+             a: 'Incorrect. Upper level sets characterize concavity, not quasiconvexity. For a quasiconvex function, upper level sets are not necessarily convex.',
+             c: 'Incorrect. Quasiconvexity does not require level sets to be bounded\u2014only that they be convex. Level sets of quasiconvex functions can be unbounded.',
+             d: 'Incorrect. Quasiconvexity requires level sets to be convex, but they need not be open. They can be closed sets or even contain boundaries.'
+           }},
+    q3:  { correct: 'a',
+           right: 'Correct! A fundamental theorem states that when maximizing a convex function over a nonempty compact polyhedral set, an optimal solution must occur at an extreme point (vertex). Intuitively, because a convex function curves upward, its maximum over a polytope is always attained at a corner, not in the interior.',
+           wrong: {
+             b: 'Incorrect. When maximizing a convex function over a polyhedral set, the optimum is at an extreme point, not at an interior point. Interior points cannot be maxima of convex functions on polytopes.',
+             c: 'Incorrect. The geometric center of mass (centroid) of the feasible region has no special optimality properties for maximizing a convex objective.',
+             d: 'Incorrect. The midpoint of the longest edge has no theoretical justification for being an optimal solution when maximizing a convex function.'
+           }},
+    q4:  { correct: 'b',
+           right: 'Correct! A key property of strictly quasiconvex functions is that every local minimum is also a global minimum. This follows from the definition: if x\u0304 is a local minimizer, then for any other point y, we can construct points on the line segment between x\u0304 and y that stay within a neighborhood of x\u0304 yet have equal or lower function values, eventually contradicting local optimality unless x\u0304 is also a global minimizer.',
+           wrong: {
+             a: 'Incorrect. Strict quasiconvexity does not guarantee uniqueness of a global minimizer. Only strongly quasiconvex functions guarantee uniqueness.',
+             c: 'Incorrect. Every stationary point being a global minimizer is a property of pseudoconvex functions, not strictly quasiconvex functions. A strictly quasiconvex function need not have stationary points at all.',
+             d: 'Incorrect. Strictly quasiconvex functions need not be differentiable. For example, a max-type function can be strictly quasiconvex but non-smooth.'
+           }},
+    q5:  { correct: 'b',
+           right: 'Correct! A strongly quasiconvex function guarantees <em>uniqueness</em> of the global minimum (when one exists). This is a stronger result than strict quasiconvexity, which only guarantees that every local minimum is global. If two distinct global minimizers existed for a strongly quasiconvex function, a convex combination between them would have a strictly lower value, contradicting their minimality.',
+           wrong: {
+             a: 'Incorrect. Strong quasiconvexity does not imply continuous differentiability. The function may be non-smooth at certain points.',
+             c: 'Incorrect. Boundedness of level sets is not guaranteed by strong quasiconvexity. A strongly quasiconvex function can have unbounded level sets.',
+             d: 'Incorrect. Strong quasiconvexity does not require the Hessian to be positive definite everywhere. Strong quasiconvexity is a global property defined via the convexity of sets, not via Hessian properties.'
+           }},
+    q6:  { correct: 'b',
+           right: 'Correct! In these course notes, f is \u03bc-strongly convex if g(x) = f(x) \u2212 \u03bc\u2016x\u2016\u00b2 is convex. Taking second derivatives gives \u2207\u00b2g(x) = \u2207\u00b2f(x) \u2212 2\u03bcI \u2ab0 0, so the Hessian condition is \u2207\u00b2f(x) \u2ab0 2\u03bcI. This ensures all eigenvalues of the Hessian are at least 2\u03bc, guaranteeing strong curvature and uniqueness of the minimizer.',
+           wrong: {
+             a: 'Incorrect. Requiring the Hessian to equal 2\u03bcI exactly is far too restrictive. The correct condition is that \u2207\u00b2f(x) \u2212 2\u03bcI is PSD (i.e., \u2207\u00b2f(x) \u2ab0 2\u03bcI), which allows more flexibility.',
+             c: 'Incorrect. The determinant condition does not characterize strong convexity. Strong convexity is defined via eigenvalues of the Hessian, not its determinant.',
+             d: 'Incorrect. The trace is not the correct condition. Strong convexity requires that the <em>smallest eigenvalue</em> of the Hessian is at least 2\u03bc, which is a different condition from the trace (sum of all eigenvalues).'
+           }},
+    q7:  { correct: 'a',
+           right: 'Correct! A pseudoconvex function has the remarkable property that every stationary point (where \u2207f = 0) is a global minimizer. This makes pseudoconvex functions important in optimization: checking first-order conditions alone is sufficient for global optimality. Pseudoconvexity is a generalization of strict convexity and lies in the hierarchy of convexity generalizations between convexity and quasiconvexity.',
+           wrong: {
+             b: 'Incorrect. Pseudoconvex functions need not have a positive semidefinite Hessian everywhere. For example, some nonconvex functions can be pseudoconvex.',
+             c: 'Incorrect. Pseudoconvex functions are not necessarily convex. A pseudoconvex function can be nonconvex while still ensuring all stationary points are global minimizers.',
+             d: 'Incorrect. This statement concerns local maxima, which is not a standard property of pseudoconvex functions. Pseudoconvexity concerns minimization, not maximization.'
+           }},
+    q8:  { correct: 'a',
+           right: 'Correct! A descent direction d at x\u0304 is defined as a direction for which \u2207f(x\u0304)\u1d40d < 0. This means moving in direction d from x\u0304 decreases the function value, at least locally. By Taylor expansion, f(x\u0304 + \u03b1d) \u2248 f(x\u0304) + \u03b1\u2207f(x\u0304)\u1d40d, so if \u2207f(x\u0304)\u1d40d < 0, then for small enough \u03b1 > 0, we have f(x\u0304 + \u03b1d) < f(x\u0304).',
+           wrong: {
+             b: 'Incorrect. If \u2207f(x\u0304)\u1d40d > 0, then moving in direction d is an <em>ascent</em> direction, not a descent direction.',
+             c: 'Incorrect. If \u2207f(x\u0304)\u1d40d = 0, then d is orthogonal to the gradient, making it neither a descent nor an ascent direction.',
+             d: 'Incorrect. The norm comparison is not the definition of descent. Descent is defined by the sign of the directional derivative, not the relative magnitudes of the direction and gradient vectors.'
+           }},
+    q9:  { correct: 'b',
+           right: 'Correct! The second-order <em>necessary</em> conditions (SONC) require two things at a local minimum x*: (1) \u2207f(x*) = 0 (first-order necessary condition), and (2) \u2207\u00b2f(x*) is positive semidefinite (second-order necessary condition). The PSD condition on the Hessian reflects the fact that if the Hessian had a negative eigenvalue, moving in the corresponding eigenvector direction would decrease the function value, contradicting local minimality.',
+           wrong: {
+             a: 'Incorrect. While \u2207f(x*) = 0 is necessary, it is not sufficient by itself. The second-order condition on the Hessian is also required. A stationary point with an indefinite Hessian is a saddle point, not a local minimum.',
+             c: 'Incorrect. Positive <em>definiteness</em> (PD) is a sufficient condition, not necessary. Necessary conditions only require positive <em>semidefiniteness</em> (PSD). The Hessian can have zero eigenvalues at a local minimum.',
+             d: 'Incorrect. Negative semidefiniteness characterizes local maxima, not local minima. For a local minimum, the Hessian must be positive semidefinite.'
+           }},
+    q10: { correct: 'b',
+           right: 'Correct! The key difference between sufficient and necessary second-order conditions is in the definiteness of the Hessian. SONC requires the Hessian to be positive semidefinite (eigenvalues \u2265 0), while SOSC requires it to be positive <em>definite</em> (eigenvalues > 0). This gap is important: when the Hessian is PSD but not PD (has zero eigenvalues), the second-order test is inconclusive, and higher-order analysis may be needed. When the Hessian is PD, we can guarantee a strict local minimum.',
+           wrong: {
+             a: 'Incorrect. The sufficient conditions also require \u2207f = 0 (gradient must be zero). This is part of both SOSC and SONC. The difference is not in the gradient condition.',
+             c: 'Incorrect. SOSC does not require global convexity. It is a local condition. We only need the Hessian to be PD at the specific point x*, not everywhere.',
+             d: 'Incorrect. Neither sufficient nor necessary second-order conditions require a third derivative test. The entire analysis is based on the first two derivatives.'
+           }},
+    q11: { correct: 'b',
+           right: 'Correct! In golden section search, the interval reduction ratio is \u03b1 \u2248 0.618, which is the reciprocal of the golden ratio \u03c6 = (1 + \u221a5)/2 \u2248 1.618. Specifically, \u03b1 = 2 \u2212 \u03c6 \u2248 0.618. This ratio arises naturally from the requirement that we can reuse one function evaluation from the previous iteration, making the algorithm highly efficient compared to other line search methods.',
+           wrong: {
+             a: 'Incorrect. A ratio of 0.5 characterizes dichotomous search, where the interval is halved at each iteration. Golden section search uses the golden ratio, not 0.5.',
+             c: 'Incorrect. A ratio of 0.75 is not associated with golden section search or other standard line search methods.',
+             d: 'Incorrect. The golden section ratio is a fixed constant (\u03b1 \u2248 0.618) that does not depend on the specific function. This constant reduction ratio is one of the key advantages of golden section search.'
+           }},
+    q12: { correct: 'b',
+           right: 'Correct! The key computational advantage of golden section search over dichotomous search is that it requires only <em>one new function evaluation per iteration</em>, whereas dichotomous search requires two new evaluations. In golden section search, the placement of interior points is such that one interior point from the previous iteration becomes an interior point of the new (smaller) interval, so only one new evaluation is needed. This makes golden section search much more efficient for function evaluation-intensive problems.',
+           wrong: {
+             a: 'Incorrect. While both golden section and dichotomous search have linear convergence rates (the interval shrinks by a constant ratio), golden section search does not have a faster convergence rate in terms of number of iterations. The advantage is in the number of function evaluations per iteration.',
+             c: 'Incorrect. Golden section search does <em>not</em> use derivative information. Both golden section and dichotomous search are zero-order methods that rely only on function values, not gradients.',
+             d: 'Incorrect. Both golden section and dichotomous search work for unimodal (quasiconvex) functions. Neither method requires global convexity or works specifically for non-quasiconvex functions.'
+           }}
+  };
+
+  let submitted = false;
+
+  function selectOption(label, qName) {
+    if (submitted) return;
+    const card = label.closest('.question-card');
+    card.querySelectorAll('.option-label').forEach(l => l.classList.remove('selected'));
+    label.classList.add('selected');
+    label.querySelector('input').checked = true;
+  }
+
+  function submitQuiz() {
+    if (submitted) return;
+
+    // Check all answered
+    const totalQ = Object.keys(answerKey).length;
+    let answered = 0;
+    let score = 0;
+
+    for (const qName of Object.keys(answerKey)) {
+      const selected = document.querySelector(`input[name="${qName}"]:checked`);
+      if (selected) answered++;
+    }
+
+    if (answered < totalQ) {
+      alert(`Please answer all ${totalQ} questions before submitting. You have answered ${answered} of ${totalQ}.`);
+      return;
+    }
+
+    submitted = true;
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('submitBtn').textContent = 'Submitted';
+
+    // Grade and show feedback
+    for (const qName of Object.keys(answerKey)) {
+      const selected = document.querySelector(`input[name="${qName}"]:checked`);
+      const selectedValue = selected.value;
+      const correctValue = answerKey[qName].correct;
+      const feedbackEl = document.getElementById(`${qName}-feedback`);
+      const card = document.getElementById(`${qName}-card`);
+      const allLabels = card.querySelectorAll('.option-label');
+
+      // Disable all options
+      allLabels.forEach(l => {
+        l.classList.add('disabled');
+        l.onclick = null;
+      });
+
+      if (selectedValue === correctValue) {
+        score++;
+        selected.closest('.option-label').classList.add('correct-answer');
+        feedbackEl.className = 'feedback correct';
+        feedbackEl.innerHTML = `<span class="feedback-icon">\u2713</span> ${answerKey[qName].right}`;
+      } else {
+        selected.closest('.option-label').classList.add('incorrect-answer');
+        feedbackEl.className = 'feedback incorrect';
+        feedbackEl.innerHTML = `<span class="feedback-icon">\u2717</span> ${answerKey[qName].wrong[selectedValue]}`;
+      }
+      feedbackEl.style.display = 'block';
+    }
+
+    // Show score
+    const pct = Math.round((score / totalQ) * 100);
+    document.getElementById('scorePercent').textContent = `${pct}%`;
+    document.getElementById('scoreDetail').textContent = `${score} out of ${totalQ} correct`;
+
+    const bar = document.getElementById('scoreBar');
+    bar.classList.remove('high', 'mid', 'low');
+    if (pct >= 70) bar.classList.add('high');
+    else if (pct >= 50) bar.classList.add('mid');
+    else bar.classList.add('low');
+    setTimeout(() => { bar.style.width = `${pct}%`; }, 100);
+
+    let msg = '';
+    if (pct === 100) msg = 'Perfect score! You have mastered the material on generalized convexity, optimality conditions, and line search algorithms.';
+    else if (pct >= 80) msg = 'Great job! You have a solid understanding of Lectures 8\u201c9 concepts including quasiconvexity, pseudoconvexity, and unconstrained optimization techniques.';
+    else if (pct >= 60) msg = 'Good effort. Review the feedback above to strengthen your understanding of generalized convexity, second-order conditions, and line search methods.';
+    else msg = 'You may want to revisit Lectures 8\u20139 and review the hierarchy of convexity generalizations, optimality conditions, and line search algorithms. The feedback above highlights the areas to focus on.';
+    document.getElementById('scoreMessage').textContent = msg;
+
+    const now = new Date();
+    document.getElementById('timestamp').textContent = `Completed: ${now.toLocaleString()}`;
+
+    const panel = document.getElementById('scorePanel');
+    panel.style.display = 'block';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+</script>
+
+</body>
+</html>

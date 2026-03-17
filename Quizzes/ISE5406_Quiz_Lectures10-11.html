@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISE 5406 — Quiz: Lectures 10–11</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --maroon: #861F41;
+    --burnt-orange: #E87722;
+    --cream: #FAF8F4;
+    --dark: #1a1a1a;
+    --mid: #4a4a4a;
+    --light-border: #e0dcd6;
+    --correct-bg: #e8f5e9;
+    --correct-border: #43a047;
+    --correct-text: #2e7d32;
+    --incorrect-bg: #fce4ec;
+    --incorrect-border: #e53935;
+    --incorrect-text: #c62828;
+    --info-bg: #e3f2fd;
+    --info-border: #1976d2;
+    --info-text: #0d47a1;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--cream);
+    color: var(--dark);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* Header bar */
+  .header {
+    background: var(--maroon);
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+  .header-badge {
+    background: var(--burnt-orange);
+    color: white;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 500;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .header h1 {
+    font-family: 'Source Serif 4', serif;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .header-sub {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.85rem;
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  /* Main container */
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  .intro {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    padding: 1.5rem 1rem;
+    border-bottom: 2px solid var(--light-border);
+  }
+  .intro h2 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--maroon);
+    margin-bottom: 0.5rem;
+  }
+  .intro p {
+    color: var(--mid);
+    font-size: 0.95rem;
+  }
+
+  /* Question card */
+  .question-card {
+    background: white;
+    border: 1px solid var(--light-border);
+    border-radius: 10px;
+    padding: 1.8rem 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    transition: box-shadow 0.3s;
+  }
+  .question-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.07); }
+
+  .question-number {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--burnt-orange);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.75rem;
+  }
+  .question-number .lecture-tag {
+    background: rgba(134,31,65,0.08);
+    color: var(--maroon);
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.7rem;
+  }
+
+  .question-text {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.12rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 1.2rem;
+    line-height: 1.5;
+  }
+
+  /* Options */
+  .options { display: flex; flex-direction: column; gap: 0.5rem; }
+
+  .option-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border: 2px solid var(--light-border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  .option-label:hover {
+    border-color: var(--maroon);
+    background: rgba(134,31,65,0.03);
+  }
+  .option-label input { display: none; }
+
+  .option-marker {
+    flex-shrink: 0;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 2px solid #c0bbb5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #8a8580;
+    transition: all 0.2s;
+    margin-top: 1px;
+  }
+  .option-label:hover .option-marker {
+    border-color: var(--maroon);
+    color: var(--maroon);
+  }
+
+  .option-label.selected {
+    border-color: var(--maroon);
+    background: rgba(134,31,65,0.06);
+  }
+  .option-label.selected .option-marker {
+    background: var(--maroon);
+    border-color: var(--maroon);
+    color: white;
+  }
+
+  /* Answered states */
+  .option-label.correct-answer {
+    border-color: var(--correct-border) !important;
+    background: var(--correct-bg) !important;
+  }
+  .option-label.correct-answer .option-marker {
+    background: var(--correct-border);
+    border-color: var(--correct-border);
+    color: white;
+  }
+  .option-label.incorrect-answer {
+    border-color: var(--incorrect-border) !important;
+    background: var(--incorrect-bg) !important;
+  }
+  .option-label.incorrect-answer .option-marker {
+    background: var(--incorrect-border);
+    border-color: var(--incorrect-border);
+    color: white;
+  }
+  .option-label.disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+  .option-label.disabled:hover {
+    border-color: var(--light-border);
+    background: transparent;
+  }
+
+  /* Feedback */
+  .feedback {
+    margin-top: 1rem;
+    padding: 1rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    display: none;
+    animation: fadeSlideIn 0.35s ease;
+  }
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .feedback.correct {
+    background: var(--correct-bg);
+    border-left: 4px solid var(--correct-border);
+    color: var(--correct-text);
+  }
+  .feedback.incorrect {
+    background: var(--incorrect-bg);
+    border-left: 4px solid var(--incorrect-border);
+    color: var(--incorrect-text);
+  }
+  .feedback-icon { font-weight: 700; margin-right: 0.3rem; }
+
+  /* Submit & Score */
+  .submit-area {
+    text-align: center;
+    margin-top: 2.5rem;
+  }
+  .btn-submit {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    background: var(--maroon);
+    color: white;
+    border: none;
+    padding: 0.9rem 3rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .btn-submit:hover { background: #6e1835; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(134,31,65,0.3); }
+  .btn-submit:active { transform: translateY(0); }
+  .btn-submit:disabled {
+    background: #b0a8a0;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Score panel */
+  .score-panel {
+    display: none;
+    margin-top: 2rem;
+    background: white;
+    border: 2px solid var(--maroon);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    animation: fadeSlideIn 0.5s ease;
+  }
+  .score-panel h3 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.3rem;
+    color: var(--maroon);
+    margin-bottom: 0.75rem;
+  }
+  .score-big {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: var(--maroon);
+    margin: 0.5rem 0;
+  }
+  .score-detail {
+    color: var(--mid);
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+  }
+  .score-bar-track {
+    width: 100%;
+    height: 12px;
+    background: #ece8e3;
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 1rem 0 1.5rem;
+  }
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 1s ease;
+    width: 0%;
+  }
+  .score-bar-fill.high { background: var(--correct-border); }
+  .score-bar-fill.mid { background: var(--burnt-orange); }
+  .score-bar-fill.low { background: var(--incorrect-border); }
+
+  .score-message {
+    font-size: 0.95rem;
+    color: var(--mid);
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+  }
+
+  .screenshot-note {
+    background: var(--info-bg);
+    border: 1px solid var(--info-border);
+    color: var(--info-text);
+    padding: 0.8rem 1rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .timestamp {
+    margin-top: 0.75rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--mid);
+  }
+
+  /* Math-like styling for inline formulas */
+  .math {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+  }
+  code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.88em;
+    background: rgba(0,0,0,0.04);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .header { flex-wrap: wrap; padding: 1rem; }
+    .header h1 { font-size: 1.2rem; }
+    .header-sub { margin-left: 0; width: 100%; font-size: 0.8rem; }
+    .container { padding: 1.2rem 1rem 3rem; }
+    .question-card { padding: 1.3rem 1.2rem; }
+    .score-big { font-size: 2.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-badge">Quiz</span>
+  <h1>ISE 5406: Optimization II</h1>
+  <span class="header-sub">Lectures 10–11 &middot; Spring 2026</span>
+</div>
+
+<div class="container">
+  <div class="intro">
+    <h2>Lectures 10–11 Comprehension Check</h2>
+    <p>Select the best answer for each question, then click <strong>Submit Quiz</strong> to see your score.<br>
+    After submitting, screenshot your results and submit on Canvas.</p>
+  </div>
+
+  <form id="quizForm" onsubmit="return false;">
+
+    <!-- Q1 -->
+    <div class="question-card" id="q1-card">
+      <div class="question-number">Question 1 <span class="lecture-tag">Lecture 10</span></div>
+      <div class="question-text">The direction of steepest descent at <span class="math">x<sub>k</sub></span> is <span class="math">d* = &minus;&nabla;f(x<sub>k</sub>)/||&nabla;f(x<sub>k</sub>)||</span>. This is derived by solving which optimization problem?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q1')">
+          <input type="radio" name="q1" value="a">
+          <span class="option-marker">A</span>
+          <span>max{&nabla;f(x<sub>k</sub>)<sup>T</sup>d : ||d||<sub>2</sub> &le; 1} — maximizing the directional derivative over unit-norm directions</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q1')">
+          <input type="radio" name="q1" value="b">
+          <span class="option-marker">B</span>
+          <span>min{&nabla;f(x<sub>k</sub>)<sup>T</sup>d : ||d||<sub>2</sub> &le; 1} — minimizing the directional derivative over unit-norm directions</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q1')">
+          <input type="radio" name="q1" value="c">
+          <span class="option-marker">C</span>
+          <span>min{||d|| : &nabla;f(x<sub>k</sub>)<sup>T</sup>d = &minus;1}</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q1')">
+          <input type="radio" name="q1" value="d">
+          <span class="option-marker">D</span>
+          <span>min{f(x<sub>k</sub> + d) : ||d||<sub>2</sub> &le; 1}</span>
+        </label>
+      </div>
+      <div class="feedback" id="q1-feedback"></div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="question-card" id="q2-card">
+      <div class="question-number">Question 2 <span class="lecture-tag">Lecture 10</span></div>
+      <div class="question-text">In steepest descent with exact line search, what is the relationship between consecutive gradients at <span class="math">x<sub>k</sub></span> and <span class="math">x<sub>k+1</sub></span>?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q2')">
+          <input type="radio" name="q2" value="a">
+          <span class="option-marker">A</span>
+          <span>&nabla;f(x<sub>k+1</sub>)<sup>T</sup>&nabla;f(x<sub>k</sub>) = 0 — consecutive gradients are orthogonal</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q2')">
+          <input type="radio" name="q2" value="b">
+          <span class="option-marker">B</span>
+          <span>&nabla;f(x<sub>k+1</sub>) = &nabla;f(x<sub>k</sub>) — gradients are equal (parallel)</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q2')">
+          <input type="radio" name="q2" value="c">
+          <span class="option-marker">C</span>
+          <span>||&nabla;f(x<sub>k+1</sub>)|| = ||&nabla;f(x<sub>k</sub>)|| — gradients have equal magnitude</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q2')">
+          <input type="radio" name="q2" value="d">
+          <span class="option-marker">D</span>
+          <span>&nabla;f(x<sub>k+1</sub>) = &minus;&nabla;f(x<sub>k</sub>) — gradients are anti-parallel</span>
+        </label>
+      </div>
+      <div class="feedback" id="q2-feedback"></div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="question-card" id="q3-card">
+      <div class="question-number">Question 3 <span class="lecture-tag">Lecture 10</span></div>
+      <div class="question-text">For the convex quadratic <span class="math">f(x) = &#x00BD;x<sup>T</sup>Qx + c<sup>T</sup>x</span> with <span class="math">Q</span> positive definite, the exact step size <span class="math">&lambda;<sub>k</sub></span> in steepest descent is:</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q3')">
+          <input type="radio" name="q3" value="a">
+          <span class="option-marker">A</span>
+          <span><span class="math">&lambda;<sub>k</sub> = (&nabla;f<sub>k</sub><sup>T</sup>&nabla;f<sub>k</sub>)/(&nabla;f<sub>k</sub><sup>T</sup>Q&nabla;f<sub>k</sub>)</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q3')">
+          <input type="radio" name="q3" value="b">
+          <span class="option-marker">B</span>
+          <span><span class="math">&lambda;<sub>k</sub> = 1/||&nabla;f||</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q3')">
+          <input type="radio" name="q3" value="c">
+          <span class="option-marker">C</span>
+          <span><span class="math">&lambda;<sub>k</sub> = 1</span> (unit step size)</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q3')">
+          <input type="radio" name="q3" value="d">
+          <span class="option-marker">D</span>
+          <span><span class="math">&lambda;<sub>k</sub> = (&nabla;f<sub>k</sub><sup>T</sup>Q&nabla;f<sub>k</sub>)/(&nabla;f<sub>k</sub><sup>T</sup>&nabla;f<sub>k</sub>)</span></span>
+        </label>
+      </div>
+      <div class="feedback" id="q3-feedback"></div>
+    </div>
+
+    <!-- Q4 -->
+    <div class="question-card" id="q4-card">
+      <div class="question-number">Question 4 <span class="lecture-tag">Lecture 10</span></div>
+      <div class="question-text">The convergence rate of steepest descent for a convex quadratic depends on the condition number <span class="math">&kappa;(Q)</span>. What happens when <span class="math">&kappa;(Q)</span> is large?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q4')">
+          <input type="radio" name="q4" value="a">
+          <span class="option-marker">A</span>
+          <span>Convergence becomes very slow, with convergence factor (1 &minus; 1/&kappa;) &approx; 1, and the iterates exhibit a characteristic zigzag pattern</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q4')">
+          <input type="radio" name="q4" value="b">
+          <span class="option-marker">B</span>
+          <span>The method converges in one step regardless of initial guess</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q4')">
+          <input type="radio" name="q4" value="c">
+          <span class="option-marker">C</span>
+          <span>The convergence rate is independent of &kappa;(Q)</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q4')">
+          <input type="radio" name="q4" value="d">
+          <span class="option-marker">D</span>
+          <span>The method exhibits quadratic convergence, regardless of &kappa;(Q)</span>
+        </label>
+      </div>
+      <div class="feedback" id="q4-feedback"></div>
+    </div>
+
+    <!-- Q5 -->
+    <div class="question-card" id="q5-card">
+      <div class="question-number">Question 5 <span class="lecture-tag">Lecture 10</span></div>
+      <div class="question-text">The Armijo sufficient decrease condition (with parameter <span class="math">c<sub>1</sub> &isin; (0, 1)</span>) requires:</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q5')">
+          <input type="radio" name="q5" value="a">
+          <span class="option-marker">A</span>
+          <span><span class="math">f(x<sub>k</sub> + &lambda;d<sub>k</sub>) &le; f(x<sub>k</sub>) + c<sub>1</sub>&lambda;&nabla;f(x<sub>k</sub>)<sup>T</sup>d<sub>k</sub></span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q5')">
+          <input type="radio" name="q5" value="b">
+          <span class="option-marker">B</span>
+          <span><span class="math">f(x<sub>k</sub> + &lambda;d<sub>k</sub>) &ge; f(x<sub>k</sub>)</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q5')">
+          <input type="radio" name="q5" value="c">
+          <span class="option-marker">C</span>
+          <span><span class="math">&nabla;f(x<sub>k</sub> + &lambda;d<sub>k</sub>)<sup>T</sup>d<sub>k</sub> = 0</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q5')">
+          <input type="radio" name="q5" value="d">
+          <span class="option-marker">D</span>
+          <span><span class="math">f(x<sub>k</sub> + &lambda;d<sub>k</sub>) &le; f(x<sub>k</sub>) &minus; c<sub>1</sub>&lambda;<sup>2</sup></span></span>
+        </label>
+      </div>
+      <div class="feedback" id="q5-feedback"></div>
+    </div>
+
+    <!-- Q6 -->
+    <div class="question-card" id="q6-card">
+      <div class="question-number">Question 6 <span class="lecture-tag">Lecture 10</span></div>
+      <div class="question-text">For an <span class="math">L</span>-smooth and <span class="math">&mu;</span>-strongly convex function, gradient descent with step size <span class="math">1/L</span> achieves what convergence rate?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q6')">
+          <input type="radio" name="q6" value="a">
+          <span class="option-marker">A</span>
+          <span>Linear (geometric) convergence: <span class="math">f(x<sub>k</sub>) &minus; f(x*) &le; (1 &minus; &mu;/L)<sup>k&minus;1</sup>(f(x<sub>1</sub>) &minus; f(x*))</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q6')">
+          <input type="radio" name="q6" value="b">
+          <span class="option-marker">B</span>
+          <span>Sublinear convergence: <span class="math">O(1/k)</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q6')">
+          <input type="radio" name="q6" value="c">
+          <span class="option-marker">C</span>
+          <span>Quadratic convergence</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q6')">
+          <input type="radio" name="q6" value="d">
+          <span class="option-marker">D</span>
+          <span>Superlinear convergence: <span class="math">O(1/k<sup>2</sup>)</span></span>
+        </label>
+      </div>
+      <div class="feedback" id="q6-feedback"></div>
+    </div>
+
+    <!-- Q7 -->
+    <div class="question-card" id="q7-card">
+      <div class="question-number">Question 7 <span class="lecture-tag">Lecture 11</span></div>
+      <div class="question-text">Newton's method derives its update by minimizing what approximation of <span class="math">f</span>?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q7')">
+          <input type="radio" name="q7" value="a">
+          <span class="option-marker">A</span>
+          <span>The second-order (quadratic) Taylor series approximation of <span class="math">f</span> at <span class="math">x<sub>k</sub></span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q7')">
+          <input type="radio" name="q7" value="b">
+          <span class="option-marker">B</span>
+          <span>The first-order (linear) Taylor series approximation of <span class="math">f</span> at <span class="math">x<sub>k</sub></span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q7')">
+          <input type="radio" name="q7" value="c">
+          <span class="option-marker">C</span>
+          <span>The function <span class="math">f</span> itself (no approximation)</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q7')">
+          <input type="radio" name="q7" value="d">
+          <span class="option-marker">D</span>
+          <span>A cubic approximation of <span class="math">f</span> at <span class="math">x<sub>k</sub></span></span>
+        </label>
+      </div>
+      <div class="feedback" id="q7-feedback"></div>
+    </div>
+
+    <!-- Q8 -->
+    <div class="question-card" id="q8-card">
+      <div class="question-number">Question 8 <span class="lecture-tag">Lecture 11</span></div>
+      <div class="question-text">What is the convergence behavior of Newton's method when applied to a convex quadratic function?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q8')">
+          <input type="radio" name="q8" value="a">
+          <span class="option-marker">A</span>
+          <span>It converges to the global minimizer in exactly one iteration from any starting point</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q8')">
+          <input type="radio" name="q8" value="b">
+          <span class="option-marker">B</span>
+          <span>It exhibits linear convergence with rate depending on the condition number</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q8')">
+          <input type="radio" name="q8" value="c">
+          <span class="option-marker">C</span>
+          <span>It requires <span class="math">n</span> iterations, where <span class="math">n</span> is the dimension</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q8')">
+          <input type="radio" name="q8" value="d">
+          <span class="option-marker">D</span>
+          <span>Convergence depends on the condition number, similar to steepest descent</span>
+        </label>
+      </div>
+      <div class="feedback" id="q8-feedback"></div>
+    </div>
+
+    <!-- Q9 -->
+    <div class="question-card" id="q9-card">
+      <div class="question-number">Question 9 <span class="lecture-tag">Lecture 11</span></div>
+      <div class="question-text">Newton's method achieves quadratic convergence locally, meaning <span class="math">||x<sub>k+1</sub> &minus; x̄|| &le; c||x<sub>k</sub> &minus; x̄||<sup>2</sup></span>. What conditions are required for this result?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q9')">
+          <input type="radio" name="q9" value="a">
+          <span class="option-marker">A</span>
+          <span>The initial guess must be sufficiently close to a stationary point x̄ where the Hessian &nabla;<sup>2</sup>f(x̄) is nonsingular</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q9')">
+          <input type="radio" name="q9" value="b">
+          <span class="option-marker">B</span>
+          <span>The function must be convex everywhere</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q9')">
+          <input type="radio" name="q9" value="c">
+          <span class="option-marker">C</span>
+          <span>The Hessian must be positive definite at every point along the iterations</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q9')">
+          <input type="radio" name="q9" value="d">
+          <span class="option-marker">D</span>
+          <span>The function must be quadratic</span>
+        </label>
+      </div>
+      <div class="feedback" id="q9-feedback"></div>
+    </div>
+
+    <!-- Q10 -->
+    <div class="question-card" id="q10-card">
+      <div class="question-number">Question 10 <span class="lecture-tag">Lecture 11</span></div>
+      <div class="question-text">The Levenberg-Marquardt modification replaces the Hessian &nabla;<sup>2</sup>f(x<sub>k</sub>) with <span class="math">M<sub>k</sub> = &nabla;<sup>2</sup>f(x<sub>k</sub>) + &mu;<sub>k</sub>I</span>. When <span class="math">&mu;<sub>k</sub></span> is very large, the method approximates:</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q10')">
+          <input type="radio" name="q10" value="a">
+          <span class="option-marker">A</span>
+          <span>The steepest descent method (since <span class="math">M<sub>k</sub> &approx; &mu;<sub>k</sub>I</span>, so <span class="math">M<sub>k</sub><sup>&minus;1</sup> &approx; (1/&mu;<sub>k</sub>)I</span>)</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q10')">
+          <input type="radio" name="q10" value="b">
+          <span class="option-marker">B</span>
+          <span>Newton's method (unchanged)</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q10')">
+          <input type="radio" name="q10" value="c">
+          <span class="option-marker">C</span>
+          <span>The conjugate gradient method</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q10')">
+          <input type="radio" name="q10" value="d">
+          <span class="option-marker">D</span>
+          <span>Random search</span>
+        </label>
+      </div>
+      <div class="feedback" id="q10-feedback"></div>
+    </div>
+
+    <!-- Q11 -->
+    <div class="question-card" id="q11-card">
+      <div class="question-number">Question 11 <span class="lecture-tag">Lecture 11</span></div>
+      <div class="question-text">Directions <span class="math">d<sub>1</sub>, d<sub>2</sub>, ..., d<sub>k</sub></span> are <span class="math">Q</span>-conjugate if <span class="math">d<sub>i</sub><sup>T</sup>Qd<sub>j</sub> = 0</span> for <span class="math">i &ne; j</span>. What is a key property of <span class="math">Q</span>-conjugate directions?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q11')">
+          <input type="radio" name="q11" value="a">
+          <span class="option-marker">A</span>
+          <span>They are linearly independent (and there can be at most <span class="math">n</span> of them in &Ropf;<sup>n</sup>)</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q11')">
+          <input type="radio" name="q11" value="b">
+          <span class="option-marker">B</span>
+          <span>They are orthogonal (i.e., <span class="math">d<sub>i</sub><sup>T</sup>d<sub>j</sub> = 0</span> for <span class="math">i &ne; j</span>)</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q11')">
+          <input type="radio" name="q11" value="c">
+          <span class="option-marker">C</span>
+          <span>They are unit vectors: <span class="math">||d<sub>i</sub>|| = 1</span> for all <span class="math">i</span></span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q11')">
+          <input type="radio" name="q11" value="d">
+          <span class="option-marker">D</span>
+          <span>They are eigenvectors of <span class="math">Q</span></span>
+        </label>
+      </div>
+      <div class="feedback" id="q11-feedback"></div>
+    </div>
+
+    <!-- Q12 -->
+    <div class="question-card" id="q12-card">
+      <div class="question-number">Question 12 <span class="lecture-tag">Lecture 11</span></div>
+      <div class="question-text">The conjugate direction method for minimizing a convex quadratic &#x00BD;<span class="math">x<sup>T</sup>Qx + c<sup>T</sup>x</span> in &Ropf;<sup>n</sup> converges in at most how many iterations?</div>
+      <div class="options">
+        <label class="option-label" onclick="selectOption(this, 'q12')">
+          <input type="radio" name="q12" value="a">
+          <span class="option-marker">A</span>
+          <span>1 iteration</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q12')">
+          <input type="radio" name="q12" value="b">
+          <span class="option-marker">B</span>
+          <span><span class="math">n</span> iterations (the dimension of the problem)</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q12')">
+          <input type="radio" name="q12" value="c">
+          <span class="option-marker">C</span>
+          <span><span class="math">n<sup>2</sup></span> iterations</span>
+        </label>
+        <label class="option-label" onclick="selectOption(this, 'q12')">
+          <input type="radio" name="q12" value="d">
+          <span class="option-marker">D</span>
+          <span>It depends on the condition number of <span class="math">Q</span></span>
+        </label>
+      </div>
+      <div class="feedback" id="q12-feedback"></div>
+    </div>
+
+    <div class="submit-area">
+      <button type="button" class="btn-submit" id="submitBtn" onclick="submitQuiz()">Submit Quiz</button>
+    </div>
+
+    <div class="score-panel" id="scorePanel">
+      <h3>Quiz Complete</h3>
+      <div class="score-big" id="scorePercent">&mdash;</div>
+      <div class="score-detail" id="scoreDetail"></div>
+      <div class="score-bar-track">
+        <div class="score-bar-fill" id="scoreBar"></div>
+      </div>
+      <div class="score-message" id="scoreMessage"></div>
+      <div class="screenshot-note">
+        &#x1F4F8; <strong>Screenshot this page</strong> (including your score and answered questions) and submit it on Canvas.
+      </div>
+      <div class="timestamp" id="timestamp"></div>
+    </div>
+
+  </form>
+</div>
+
+<script>
+  // Answer key
+  const answerKey = {
+    q1:  { correct: 'b',
+           right: 'Correct! The direction of steepest descent minimizes the directional derivative &nabla;f(x<sub>k</sub>)<sup>T</sup>d over all unit-norm directions d. By Cauchy-Schwarz, the minimum is achieved when d points in the direction of &minus;&nabla;f(x<sub>k</sub>), giving d* = &minus;&nabla;f(x<sub>k</sub>)/||&nabla;f(x<sub>k</sub>)||.',
+           wrong: {
+             a: 'Incorrect. Maximizing the directional derivative over unit-norm directions gives the direction of steepest ascent (positive gradient direction), not descent. The steepest descent requires minimization, not maximization.',
+             c: 'Incorrect. This describes a norm minimization problem subject to an affine constraint, which does not capture the directional derivative minimization that defines steepest descent.',
+             d: 'Incorrect. While minimizing f(x<sub>k</sub> + d) seems natural, it only makes sense with a first-order (linear) approximation, not over the actual nonlinear function. The steepest descent direction is defined through the directional derivative, not direct function minimization.'
+           }},
+    q2:  { correct: 'a',
+           right: 'Correct! When using exact line search (optimal step size), the directional derivative is zero at the new point, which forces orthogonality between consecutive gradients. This is a fundamental property: &nabla;f(x<sub>k+1</sub>)<sup>T</sup>&nabla;f(x<sub>k</sub>) = 0 for exact line search. This orthogonality leads to the characteristic zigzag behavior of steepest descent.',
+           wrong: {
+             b: 'Incorrect. Consecutive gradients are generally not equal unless the method converges (at convergence, &nabla;f = 0). Early iterations have different gradient vectors that change direction.',
+             c: 'Incorrect. The magnitudes of consecutive gradients need not be equal. In fact, as the method converges, gradients typically decrease in magnitude, approaching zero at the optimum.',
+             d: 'Incorrect. Consecutive gradients are orthogonal (90-degree angle), not anti-parallel (180-degree angle). Anti-parallel would mean d<sub>k+1</sub> = d<sub>k</sub>, which would indicate no progress.'
+           }},
+    q3:  { correct: 'a',
+           right: 'Correct! For a quadratic f(x) = &frac12;x<sup>T</sup>Qx + c<sup>T</sup>x, exact line search in direction d<sub>k</sub> = &minus;&nabla;f<sub>k</sub> yields &lambda;<sub>k</sub> = (&nabla;f<sub>k</sub><sup>T</sup>&nabla;f<sub>k</sub>)/(&nabla;f<sub>k</sub><sup>T</sup>Q&nabla;f<sub>k</sub>). This is derived by solving min<sub>&lambda;</sub> f(x<sub>k</sub> + &lambda;d<sub>k</sub>) with respect to &lambda;, which gives a closed-form solution for quadratics.',
+           wrong: {
+             b: 'Incorrect. &lambda;<sub>k</sub> = 1/||&nabla;f|| lacks the matrix Q in the denominator and does not have the proper scaling for quadratic functions. This formula ignores the curvature of the problem.',
+             c: 'Incorrect. A unit step size &lambda; = 1 is rarely optimal for steepest descent, even on quadratics. The optimal step size must account for both the gradient magnitude and the curvature Q.',
+             d: 'Incorrect. This has the numerator and denominator reversed compared to the correct answer. This would give a step size that is too large, not the optimal one.'
+           }},
+    q4:  { correct: 'a',
+           right: 'Correct! When the condition number &kappa;(Q) = &alpha;<sub>max</sub>/&alpha;<sub>min</sub> is large, the eigenvalues of Q are very different, causing the iterates to zigzag. The convergence factor is (1 &minus; 1/&kappa;) &approx; 1 when &kappa; is large, meaning convergence is very slow. This is a fundamental limitation of steepest descent.',
+           wrong: {
+             b: 'Incorrect. One-step convergence is only true for Newton\'s method applied to quadratics, not steepest descent. Steepest descent generally requires many iterations.',
+             c: 'Incorrect. The convergence rate of steepest descent DEPENDS critically on &kappa;(Q). This is precisely why steepest descent fails on ill-conditioned problems.',
+             d: 'Incorrect. Steepest descent exhibits linear (geometric) convergence, not quadratic convergence. Quadratic convergence is a feature of Newton\'s method.'
+           }},
+    q5:  { correct: 'a',
+           right: 'Correct! The Armijo condition requires f(x<sub>k</sub> + &lambda;d<sub>k</sub>) &le; f(x<sub>k</sub>) + c<sub>1</sub>&lambda;&nabla;f(x<sub>k</sub>)<sup>T</sup>d<sub>k</sub> for c<sub>1</sub> &isin; (0,1). This guarantees sufficient decrease along the direction&mdash;the reduction in f is proportional to the step size and directional derivative. It is a practical line search condition widely used in optimization algorithms.',
+           wrong: {
+             b: 'Incorrect. f(x<sub>k</sub> + &lambda;d<sub>k</sub>) &ge; f(x<sub>k</sub>) means no decrease, which contradicts the goal of minimization. The Armijo condition requires strict decrease.',
+             c: 'Incorrect. Setting the directional derivative to zero &nabla;f(x<sub>k+1</sub>)<sup>T</sup>d<sub>k</sub> = 0 describes exact line search, not the Armijo condition. Armijo only requires sufficient (not exact) decrease.',
+             d: 'Incorrect. The right-hand side of Armijo is c<sub>1</sub>&lambda;&nabla;f(x<sub>k</sub>)<sup>T</sup>d<sub>k</sub> (linear in &lambda;), not &minus;c<sub>1</sub>&lambda;<sup>2</sup>. The quadratic term appears in other conditions like curvature conditions.'
+           }},
+    q6:  { correct: 'a',
+           right: 'Correct! For L-smooth and &mu;-strongly convex functions, gradient descent with step size 1/L converges linearly with rate (1 &minus; &mu;/L): f(x<sub>k</sub>) &minus; f(x*) &le; (1 &minus; &mu;/L)<sup>k&minus;1</sup>(f(x<sub>1</sub>) &minus; f(x*)). Linear convergence means the error decreases geometrically at each step. The rate depends on the condition number &kappa; = L/&mu;.',
+           wrong: {
+             b: 'Incorrect. Sublinear O(1/k) convergence applies to gradient descent on merely convex functions (without strong convexity). Strong convexity enables much faster linear convergence.',
+             c: 'Incorrect. Quadratic convergence is achieved by Newton\'s method locally near a minimizer, not by first-order methods like gradient descent. Gradient descent achieves at most linear convergence.',
+             d: 'Incorrect. O(1/k<sup>2</sup>) is sometimes called superlinear but does not match the linear convergence of gradient descent on strongly convex, smooth functions.'
+           }},
+    q7:  { correct: 'a',
+           right: 'Correct! Newton\'s method constructs a quadratic (second-order Taylor) approximation &tilde;f(x) = f(x<sub>k</sub>) + &nabla;f(x<sub>k</sub>)<sup>T</sup>(x &minus; x<sub>k</sub>) + &frac12;(x &minus; x<sub>k</sub>)<sup>T</sup>&nabla;<sup>2</sup>f(x<sub>k</sub>)(x &minus; x<sub>k</sub>) and minimizes it. The minimizer of this quadratic gives the Newton step x<sub>k+1</sub> = x<sub>k</sub> &minus; [&nabla;<sup>2</sup>f(x<sub>k</sub>)]<sup>&minus;1</sup>&nabla;f(x<sub>k</sub>).',
+           wrong: {
+             b: 'Incorrect. Minimizing only a first-order (linear) approximation gives steepest descent, not Newton\'s method. Newton\'s method uses the second-order approximation to capture curvature information.',
+             c: 'Incorrect. Newton\'s method does not minimize f directly; it minimizes a quadratic approximation. This distinction is crucial for deriving the Newton step and understanding its convergence.',
+             d: 'Incorrect. A cubic approximation would be overly complex and is not the basis of Newton\'s method. Standard Newton uses only the quadratic (second-order) Taylor approximation.'
+           }},
+    q8:  { correct: 'a',
+           right: 'Correct! For a convex quadratic f(x) = &frac12;x<sup>T</sup>Qx + c<sup>T</sup>x, the Newton step gives the exact solution to &nabla;f = Qx + c = 0 in a single iteration. Starting from any x<sub>0</sub>, one Newton step produces x<sub>1</sub> = x<sub>0</sub> &minus; Q<sup>&minus;1</sup>(Qx<sub>0</sub> + c) = &minus;Q<sup>&minus;1</sup>c = x*, the global minimizer. This one-step convergence is a hallmark of quadratic functions.',
+           wrong: {
+             b: 'Incorrect. Linear convergence depends on condition number and applies to first-order methods like steepest descent. Newton\'s method on quadratics achieves exact solution in one step, not linear convergence over multiple steps.',
+             c: 'Incorrect. Requiring n iterations is the property of conjugate direction methods, not Newton\'s method. Newton converges to a quadratic minimizer in exactly one step.',
+             d: 'Incorrect. Newton\'s method is immune to the condition number on quadratics; it solves Qx = &minus;c exactly in one step regardless of &kappa;(Q). Steepest descent, however, slows down with large condition number.'
+           }},
+    q9:  { correct: 'a',
+           right: 'Correct! Quadratic convergence ||x<sub>k+1</sub> &minus; x&bar;|| &le; c||x<sub>k</sub> &minus; x&bar;||<sup>2</sup> holds for Newton\'s method only locally (near the solution), requiring two conditions: (1) x<sub>0</sub> must be in a neighborhood of x&bar;, and (2) &nabla;<sup>2</sup>f(x&bar;) must be nonsingular. Under these conditions, once the iterates enter this region, they converge super-fast (quadratically).',
+           wrong: {
+             b: 'Incorrect. Global convexity is not required for local quadratic convergence. Newton achieves quadratic convergence even for nonconvex functions if started close enough to a stationary point with nonsingular Hessian.',
+             c: 'Incorrect. The Hessian only needs to be nonsingular at the solution x&bar;, not at every point along the path. In fact, a nonsingular Hessian everywhere would be an unnecessarily strong condition.',
+             d: 'Incorrect. Newton achieves quadratic convergence on general functions (not just quadratics), provided the initial guess is close to a solution and the Hessian is nonsingular there. The function need not be quadratic.'
+           }},
+    q10: { correct: 'a',
+           right: 'Correct! The Levenberg-Marquardt step is x<sub>k+1</sub> = x<sub>k</sub> &minus; (M<sub>k</sub>)<sup>&minus;1</sup>&nabla;f<sub>k</sub> with M<sub>k</sub> = &nabla;<sup>2</sup>f<sub>k</sub> + &mu;<sub>k</sub>I. When &mu;<sub>k</sub> is very large, M<sub>k</sub> &approx; &mu;<sub>k</sub>I dominates, so M<sub>k</sub><sup>&minus;1</sup> &approx; (1/&mu;<sub>k</sub>)I. This gives x<sub>k+1</sub> &approx; x<sub>k</sub> &minus; (1/&mu;<sub>k</sub>)&nabla;f<sub>k</sub>, which is exactly a steepest descent step with step size 1/&mu;<sub>k</sub>. This shows Levenberg-Marquardt interpolates between Newton and steepest descent.',
+           wrong: {
+             b: 'Incorrect. When &mu;<sub>k</sub> is large, M<sub>k</sub> is dominated by &mu;<sub>k</sub>I, not the Hessian. The method moves away from Newton and toward steepest descent.',
+             c: 'Incorrect. The conjugate gradient method generates conjugate directions iteratively and does not use the form (M<sub>k</sub>)<sup>&minus;1</sup>&nabla;f<sub>k</sub>. Levenberg-Marquardt is an interpolation between Newton and steepest descent, not conjugate gradient.',
+             d: 'Incorrect. Random search does not have a systematic update rule based on gradients and Hessians. Levenberg-Marquardt is deterministic.'
+           }},
+    q11: { correct: 'a',
+           right: 'Correct! If d<sub>1</sub>, ..., d<sub>k</sub> are Q-conjugate and Q is positive definite, then they are linearly independent. Proof: if &Sigma;&alpha;<sub>i</sub>d<sub>i</sub> = 0, then for any j: 0 = d<sub>j</sub><sup>T</sup>Q(&Sigma;&alpha;<sub>i</sub>d<sub>i</sub>) = &alpha;<sub>j</sub>d<sub>j</sub><sup>T</sup>Qd<sub>j</sub>. Since d<sub>j</sub><sup>T</sup>Qd<sub>j</sub> &gt; 0 (Q is PD and d<sub>j</sub> &ne; 0), we have &alpha;<sub>j</sub> = 0 for all j. Thus at most n linearly independent Q-conjugate directions exist in &Ropf;<sup>n</sup>.',
+           wrong: {
+             b: 'Incorrect. Q-conjugate and orthogonal are different concepts. Q-conjugacy d<sub>i</sub><sup>T</sup>Qd<sub>j</sub> = 0 involves the matrix Q, whereas orthogonality d<sub>i</sub><sup>T</sup>d<sub>j</sub> = 0 does not. Unless Q = I (identity), these are distinct.',
+             c: 'Incorrect. Unit vectors is an unnecessary restriction. Q-conjugate directions can have any magnitude; what matters is their direction, not their norm.',
+             d: 'Incorrect. Q-conjugate directions need not be eigenvectors of Q. Eigenvectors of Q are a special case of Q-conjugate directions (eigenvectors corresponding to different eigenvalues are Q-conjugate), but not all Q-conjugate directions are eigenvectors.'
+           }},
+    q12: { correct: 'b',
+           right: 'Correct! The conjugate direction method for a convex quadratic in &Ropf;<sup>n</sup> converges in at most n iterations. This is a finite convergence result: given n linearly independent Q-conjugate directions, the method can reach the optimum in at most n steps. Each step eliminates one direction of residual error. This is a major advantage over steepest descent, which may require many more iterations.',
+           wrong: {
+             a: 'Incorrect. One-step convergence is reserved for Newton\'s method on quadratics. Conjugate direction methods need up to n steps (though exact convergence may occur sooner due to rounding or structure).',
+             c: 'Incorrect. n<sup>2</sup> is far too pessimistic. The dimension n bounds the maximum number of iterations, not n<sup>2</sup>. The method exploits conjugacy to converge in at most n steps.',
+             d: 'Incorrect. While condition number affects the practical convergence speed of gradient-based methods, the conjugate direction method has a finite termination guarantee: it solves any n-dimensional quadratic in at most n iterations, independent of &kappa;(Q).'
+           }}
+  };
+
+  let submitted = false;
+
+  function selectOption(label, qName) {
+    if (submitted) return;
+    const card = label.closest('.question-card');
+    card.querySelectorAll('.option-label').forEach(l => l.classList.remove('selected'));
+    label.classList.add('selected');
+    label.querySelector('input').checked = true;
+  }
+
+  function submitQuiz() {
+    if (submitted) return;
+
+    // Check all answered
+    const totalQ = Object.keys(answerKey).length;
+    let answered = 0;
+    let score = 0;
+
+    for (const qName of Object.keys(answerKey)) {
+      const selected = document.querySelector(`input[name="${qName}"]:checked`);
+      if (selected) answered++;
+    }
+
+    if (answered < totalQ) {
+      alert(`Please answer all ${totalQ} questions before submitting. You have answered ${answered} of ${totalQ}.`);
+      return;
+    }
+
+    submitted = true;
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('submitBtn').textContent = 'Submitted';
+
+    // Grade and show feedback
+    for (const qName of Object.keys(answerKey)) {
+      const selected = document.querySelector(`input[name="${qName}"]:checked`);
+      const selectedValue = selected.value;
+      const correctValue = answerKey[qName].correct;
+      const feedbackEl = document.getElementById(`${qName}-feedback`);
+      const card = document.getElementById(`${qName}-card`);
+      const allLabels = card.querySelectorAll('.option-label');
+
+      // Disable all options
+      allLabels.forEach(l => {
+        l.classList.add('disabled');
+        l.onclick = null;
+      });
+
+      if (selectedValue === correctValue) {
+        score++;
+        selected.closest('.option-label').classList.add('correct-answer');
+        feedbackEl.className = 'feedback correct';
+        feedbackEl.innerHTML = `<span class="feedback-icon">\u2713</span> ${answerKey[qName].right}`;
+      } else {
+        selected.closest('.option-label').classList.add('incorrect-answer');
+        feedbackEl.className = 'feedback incorrect';
+        feedbackEl.innerHTML = `<span class="feedback-icon">\u2717</span> ${answerKey[qName].wrong[selectedValue]}`;
+      }
+      feedbackEl.style.display = 'block';
+    }
+
+    // Show score
+    const pct = Math.round((score / totalQ) * 100);
+    document.getElementById('scorePercent').textContent = `${pct}%`;
+    document.getElementById('scoreDetail').textContent = `${score} out of ${totalQ} correct`;
+
+    const bar = document.getElementById('scoreBar');
+    bar.classList.remove('high', 'mid', 'low');
+    if (pct >= 70) bar.classList.add('high');
+    else if (pct >= 50) bar.classList.add('mid');
+    else bar.classList.add('low');
+    setTimeout(() => { bar.style.width = `${pct}%`; }, 100);
+
+    let msg = '';
+    if (pct === 100) msg = 'Perfect score! Outstanding command of Lectures 10\u201311 material on first-order and second-order optimization methods.';
+    else if (pct >= 80) msg = 'Great job! You have a solid understanding of steepest descent, Newton\'s method, and conjugate direction methods.';
+    else if (pct >= 60) msg = 'Good effort. Review the feedback above to strengthen your understanding of line search conditions, convergence analysis, and quasi-Newton methods.';
+    else msg = 'You may want to revisit Lectures 10\u201311 and review the key algorithms, convergence rates, and the role of the Hessian. The feedback above highlights the areas to focus on.';
+    document.getElementById('scoreMessage').textContent = msg;
+
+    const now = new Date();
+    document.getElementById('timestamp').textContent = `Completed: ${now.toLocaleString()}`;
+
+    const panel = document.getElementById('scorePanel');
+    panel.style.display = 'block';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+</script>
+
+</body>
+</html>
