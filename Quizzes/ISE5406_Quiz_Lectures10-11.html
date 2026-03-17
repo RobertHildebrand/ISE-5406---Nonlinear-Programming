@@ -640,93 +640,6 @@
       <div class="feedback" id="q9-feedback"></div>
     </div>
 
-    <!-- Q10 -->
-    <div class="question-card" id="q10-card">
-      <div class="question-number">Question 10 <span class="lecture-tag">Lecture 11</span></div>
-      <div class="question-text">The Levenberg-Marquardt modification replaces the Hessian &nabla;<sup>2</sup>f(x<sub>k</sub>) with <span class="math">M<sub>k</sub> = &nabla;<sup>2</sup>f(x<sub>k</sub>) + &mu;<sub>k</sub>I</span>. When <span class="math">&mu;<sub>k</sub></span> is very large, the method approximates:</div>
-      <div class="options">
-        <label class="option-label" onclick="selectOption(this, 'q10')">
-          <input type="radio" name="q10" value="a">
-          <span class="option-marker">A</span>
-          <span>The steepest descent method (since <span class="math">M<sub>k</sub> &approx; &mu;<sub>k</sub>I</span>, so <span class="math">M<sub>k</sub><sup>&minus;1</sup> &approx; (1/&mu;<sub>k</sub>)I</span>)</span>
-        </label>
-        <label class="option-label" onclick="selectOption(this, 'q10')">
-          <input type="radio" name="q10" value="b">
-          <span class="option-marker">B</span>
-          <span>Newton's method (unchanged)</span>
-        </label>
-        <label class="option-label" onclick="selectOption(this, 'q10')">
-          <input type="radio" name="q10" value="c">
-          <span class="option-marker">C</span>
-          <span>The conjugate gradient method</span>
-        </label>
-        <label class="option-label" onclick="selectOption(this, 'q10')">
-          <input type="radio" name="q10" value="d">
-          <span class="option-marker">D</span>
-          <span>Random search</span>
-        </label>
-      </div>
-      <div class="feedback" id="q10-feedback"></div>
-    </div>
-
-    <!-- Q11 -->
-    <div class="question-card" id="q11-card">
-      <div class="question-number">Question 11 <span class="lecture-tag">Lecture 11</span></div>
-      <div class="question-text">Directions <span class="math">d<sub>1</sub>, d<sub>2</sub>, ..., d<sub>k</sub></span> are <span class="math">Q</span>-conjugate if <span class="math">d<sub>i</sub><sup>T</sup>Qd<sub>j</sub> = 0</span> for <span class="math">i &ne; j</span>. What is a key property of <span class="math">Q</span>-conjugate directions?</div>
-      <div class="options">
-        <label class="option-label" onclick="selectOption(this, 'q11')">
-          <input type="radio" name="q11" value="a">
-          <span class="option-marker">A</span>
-          <span>They are linearly independent (and there can be at most <span class="math">n</span> of them in &Ropf;<sup>n</sup>)</span>
-        </label>
-        <label class="option-label" onclick="selectOption(this, 'q11')">
-          <input type="radio" name="q11" value="b">
-          <span class="option-marker">B</span>
-          <span>They are orthogonal (i.e., <span class="math">d<sub>i</sub><sup>T</sup>d<sub>j</sub> = 0</span> for <span class="math">i &ne; j</span>)</span>
-        </label>
-        <label class="option-label" onclick="selectOption(this, 'q11')">
-          <input type="radio" name="q11" value="c">
-          <span class="option-marker">C</span>
-          <span>They are unit vectors: <span class="math">||d<sub>i</sub>|| = 1</span> for all <span class="math">i</span></span>
-        </label>
-        <label class="option-label" onclick="selectOption(this, 'q11')">
-          <input type="radio" name="q11" value="d">
-          <span class="option-marker">D</span>
-          <span>They are eigenvectors of <span class="math">Q</span></span>
-        </label>
-      </div>
-      <div class="feedback" id="q11-feedback"></div>
-    </div>
-
-    <!-- Q12 -->
-    <div class="question-card" id="q12-card">
-      <div class="question-number">Question 12 <span class="lecture-tag">Lecture 11</span></div>
-      <div class="question-text">The conjugate direction method for minimizing a convex quadratic &#x00BD;<span class="math">x<sup>T</sup>Qx + c<sup>T</sup>x</span> in &Ropf;<sup>n</sup> converges in at most how many iterations?</div>
-      <div class="options">
-        <label class="option-label" onclick="selectOption(this, 'q12')">
-          <input type="radio" name="q12" value="a">
-          <span class="option-marker">A</span>
-          <span>1 iteration</span>
-        </label>
-        <label class="option-label" onclick="selectOption(this, 'q12')">
-          <input type="radio" name="q12" value="b">
-          <span class="option-marker">B</span>
-          <span><span class="math">n</span> iterations (the dimension of the problem)</span>
-        </label>
-        <label class="option-label" onclick="selectOption(this, 'q12')">
-          <input type="radio" name="q12" value="c">
-          <span class="option-marker">C</span>
-          <span><span class="math">n<sup>2</sup></span> iterations</span>
-        </label>
-        <label class="option-label" onclick="selectOption(this, 'q12')">
-          <input type="radio" name="q12" value="d">
-          <span class="option-marker">D</span>
-          <span>It depends on the condition number of <span class="math">Q</span></span>
-        </label>
-      </div>
-      <div class="feedback" id="q12-feedback"></div>
-    </div>
-
     <div class="submit-area">
       <button type="button" class="btn-submit" id="submitBtn" onclick="submitQuiz()">Submit Quiz</button>
     </div>
@@ -814,27 +727,6 @@
              c: 'Incorrect. The Hessian only needs to be nonsingular at the solution x&bar;, not at every point along the path. In fact, a nonsingular Hessian everywhere would be an unnecessarily strong condition.',
              d: 'Incorrect. Newton achieves quadratic convergence on general functions (not just quadratics), provided the initial guess is close to a solution and the Hessian is nonsingular there. The function need not be quadratic.'
            }},
-    q10: { correct: 'a',
-           right: 'Correct! The Levenberg-Marquardt step is x<sub>k+1</sub> = x<sub>k</sub> &minus; (M<sub>k</sub>)<sup>&minus;1</sup>&nabla;f<sub>k</sub> with M<sub>k</sub> = &nabla;<sup>2</sup>f<sub>k</sub> + &mu;<sub>k</sub>I. When &mu;<sub>k</sub> is very large, M<sub>k</sub> &approx; &mu;<sub>k</sub>I dominates, so M<sub>k</sub><sup>&minus;1</sup> &approx; (1/&mu;<sub>k</sub>)I. This gives x<sub>k+1</sub> &approx; x<sub>k</sub> &minus; (1/&mu;<sub>k</sub>)&nabla;f<sub>k</sub>, which is exactly a steepest descent step with step size 1/&mu;<sub>k</sub>. This shows Levenberg-Marquardt interpolates between Newton and steepest descent.',
-           wrong: {
-             b: 'Incorrect. When &mu;<sub>k</sub> is large, M<sub>k</sub> is dominated by &mu;<sub>k</sub>I, not the Hessian. The method moves away from Newton and toward steepest descent.',
-             c: 'Incorrect. The conjugate gradient method generates conjugate directions iteratively and does not use the form (M<sub>k</sub>)<sup>&minus;1</sup>&nabla;f<sub>k</sub>. Levenberg-Marquardt is an interpolation between Newton and steepest descent, not conjugate gradient.',
-             d: 'Incorrect. Random search does not have a systematic update rule based on gradients and Hessians. Levenberg-Marquardt is deterministic.'
-           }},
-    q11: { correct: 'a',
-           right: 'Correct! If d<sub>1</sub>, ..., d<sub>k</sub> are Q-conjugate and Q is positive definite, then they are linearly independent. Proof: if &Sigma;&alpha;<sub>i</sub>d<sub>i</sub> = 0, then for any j: 0 = d<sub>j</sub><sup>T</sup>Q(&Sigma;&alpha;<sub>i</sub>d<sub>i</sub>) = &alpha;<sub>j</sub>d<sub>j</sub><sup>T</sup>Qd<sub>j</sub>. Since d<sub>j</sub><sup>T</sup>Qd<sub>j</sub> &gt; 0 (Q is PD and d<sub>j</sub> &ne; 0), we have &alpha;<sub>j</sub> = 0 for all j. Thus at most n linearly independent Q-conjugate directions exist in &Ropf;<sup>n</sup>.',
-           wrong: {
-             b: 'Incorrect. Q-conjugate and orthogonal are different concepts. Q-conjugacy d<sub>i</sub><sup>T</sup>Qd<sub>j</sub> = 0 involves the matrix Q, whereas orthogonality d<sub>i</sub><sup>T</sup>d<sub>j</sub> = 0 does not. Unless Q = I (identity), these are distinct.',
-             c: 'Incorrect. Unit vectors is an unnecessary restriction. Q-conjugate directions can have any magnitude; what matters is their direction, not their norm.',
-             d: 'Incorrect. Q-conjugate directions need not be eigenvectors of Q. Eigenvectors of Q are a special case of Q-conjugate directions (eigenvectors corresponding to different eigenvalues are Q-conjugate), but not all Q-conjugate directions are eigenvectors.'
-           }},
-    q12: { correct: 'b',
-           right: 'Correct! The conjugate direction method for a convex quadratic in &Ropf;<sup>n</sup> converges in at most n iterations. This is a finite convergence result: given n linearly independent Q-conjugate directions, the method can reach the optimum in at most n steps. Each step eliminates one direction of residual error. This is a major advantage over steepest descent, which may require many more iterations.',
-           wrong: {
-             a: 'Incorrect. One-step convergence is reserved for Newton\'s method on quadratics. Conjugate direction methods need up to n steps (though exact convergence may occur sooner due to rounding or structure).',
-             c: 'Incorrect. n<sup>2</sup> is far too pessimistic. The dimension n bounds the maximum number of iterations, not n<sup>2</sup>. The method exploits conjugacy to converge in at most n steps.',
-             d: 'Incorrect. While condition number affects the practical convergence speed of gradient-based methods, the conjugate direction method has a finite termination guarantee: it solves any n-dimensional quadratic in at most n iterations, independent of &kappa;(Q).'
-           }}
   };
 
   let submitted = false;
