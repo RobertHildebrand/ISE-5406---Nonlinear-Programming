@@ -186,25 +186,22 @@ const METHODS = {
 };
 
 // ---------------- 3D projection ----------------
-// Camera: spherical (theta = azimuth around z, phi = elevation tilt).
-// Orthographic projection.
+// Camera: spherical (theta = azimuth around z, phi = tilt above horizontal).
+//   phi = 0       → looking horizontally; world-z appears as screen-up.
+//   phi = π/2     → looking straight down; world-y appears as screen-up.
+// Orthographic. Painter's algorithm: smaller depth = farther = draw first.
 function project([x, y, z], camera) {
   const ct = Math.cos(camera.theta);
   const st = Math.sin(camera.theta);
-  // rotate around z by theta
-  const x1 = x * ct - y * st;
-  const y1 = x * st + y * ct;
-  const z1 = z;
-  // rotate around x by phi (elevation)
+  const xa = x * ct - y * st;        // screen-x
+  const ya = x * st + y * ct;        // pre-tilt forward axis
   const cp = Math.cos(camera.phi);
   const sp = Math.sin(camera.phi);
-  const x2 = x1;
-  const y2 = y1 * cp - z1 * sp;
-  const z2 = y1 * sp + z1 * cp;
+  const screenUp = z * cp + ya * sp;
   return {
-    sx: camera.cx + camera.scale * x2,
-    sy: camera.cy - camera.scale * y2,
-    depth: z2,
+    sx: camera.cx + camera.scale * xa,
+    sy: camera.cy - camera.scale * screenUp,
+    depth: z * sp - ya * cp,
   };
 }
 
@@ -461,6 +458,7 @@ export default function Optim3DDemo() {
   const method = METHODS[methodKey];
 
   const [hp, setHp] = useState(() => Object.fromEntries(method.hp.map((p) => [p.key, p.def])));
+  const [start, setStart] = useState(fn.start);
   const [trajectory, setTrajectory] = useState(() => [
     { x: fn.start[0], y: fn.start[1] },
   ]);
@@ -471,20 +469,29 @@ export default function Optim3DDemo() {
   // camera state
   const [camera, setCamera] = useState({
     theta: -Math.PI / 4,
-    phi: Math.PI / 3.2,
+    phi: 1.0, // ~57° above horizontal — tilted oblique view
     scale: 110,
     cx: 310,
     cy: 280,
   });
   const dragRef = useRef(null);
 
-  // Reset trajectory whenever function or method changes.
+  // When the function changes, snap start back to that function's recommended point.
   useEffect(() => {
-    stateRef.current = { x: fn.start[0], y: fn.start[1], ...method.init() };
-    setTrajectory([{ x: fn.start[0], y: fn.start[1] }]);
-    setHp(Object.fromEntries(method.hp.map((p) => [p.key, p.def])));
+    setStart(FUNCTIONS[fnKey].start);
+  }, [fnKey]);
+
+  // When the method changes, reset its hyperparameters to defaults.
+  useEffect(() => {
+    setHp(Object.fromEntries(METHODS[methodKey].hp.map((p) => [p.key, p.def])));
+  }, [methodKey]);
+
+  // Reset trajectory whenever function, method, or start point changes.
+  useEffect(() => {
+    stateRef.current = { x: start[0], y: start[1], ...METHODS[methodKey].init() };
+    setTrajectory([{ x: start[0], y: start[1] }]);
     setRunning(false);
-  }, [fnKey, methodKey]);
+  }, [fnKey, methodKey, start]);
 
   const step = useCallback(() => {
     const next = method.step(stateRef.current, fn, hp);
@@ -509,8 +516,8 @@ export default function Optim3DDemo() {
   }, [running, step]);
 
   const reset = () => {
-    stateRef.current = { x: fn.start[0], y: fn.start[1], ...method.init() };
-    setTrajectory([{ x: fn.start[0], y: fn.start[1] }]);
+    stateRef.current = { x: start[0], y: start[1], ...method.init() };
+    setTrajectory([{ x: start[0], y: start[1] }]);
     setRunning(false);
   };
 
@@ -528,9 +535,10 @@ export default function Optim3DDemo() {
     const dx = e.clientX - dragRef.current.x;
     const dy = e.clientY - dragRef.current.y;
     const newTheta = dragRef.current.theta - dx * 0.01;
+    // Drag mouse DOWN → tilt camera more top-down (increase phi).
     const newPhi = Math.max(
       0.05,
-      Math.min(Math.PI / 2 - 0.05, dragRef.current.phi - dy * 0.01)
+      Math.min(Math.PI / 2 - 0.05, dragRef.current.phi + dy * 0.01)
     );
     setCamera((c) => ({ ...c, theta: newTheta, phi: newPhi }));
   };
@@ -624,6 +632,45 @@ export default function Optim3DDemo() {
           ))}
 
           <div style={controlGroup}>
+            <label style={label}>
+              start x: <b>{start[0].toFixed(2)}</b>
+            </label>
+            <input
+              type="range"
+              min={fn.box[0]}
+              max={fn.box[1]}
+              step={0.05}
+              value={start[0]}
+              onChange={(e) => setStart([+e.target.value, start[1]])}
+              style={{ width: "100%" }}
+            />
+          </div>
+
+          <div style={controlGroup}>
+            <label style={label}>
+              start y: <b>{start[1].toFixed(2)}</b>
+            </label>
+            <input
+              type="range"
+              min={fn.box[2]}
+              max={fn.box[3]}
+              step={0.05}
+              value={start[1]}
+              onChange={(e) => setStart([start[0], +e.target.value])}
+              style={{ width: "100%" }}
+            />
+          </div>
+
+          <div style={controlGroup}>
+            <button
+              onClick={() => setStart([...FUNCTIONS[fnKey].start])}
+              style={{ ...btn, fontSize: 12, padding: "5px 10px" }}
+            >
+              reset start to default
+            </button>
+          </div>
+
+          <div style={controlGroup}>
             <label style={{ ...label, display: "flex", alignItems: "center", gap: 8 }}>
               <input
                 type="checkbox"
@@ -659,6 +706,10 @@ export default function Optim3DDemo() {
             Switch to <i>Heavy-Ball Momentum</i> with the same step and watch
             the trajectory smooth out. On <i>Rosenbrock</i>, GD crawls along
             the banana floor while Adam glides through.
+            <br />
+            <b>Diverging?</b> Move the <b>start x / start y</b> sliders to a
+            point closer to the optimum, or shrink the learning rate. Use
+            <i> reset start to default </i> to snap back.
           </p>
         </div>
       </div>
