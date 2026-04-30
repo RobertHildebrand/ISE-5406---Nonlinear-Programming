@@ -10,6 +10,7 @@ import LineSearchDemo from '../linesearch_demo.jsx';
 import BarrierDemo from '../barrier_demo.jsx';
 import PerceptronTutorial from '../perceptron_tutorial.jsx';
 import SGDAdamTutorial from '../sgd_adam_tutorial.jsx';
+import NNDemo from '../nn_demo.jsx';
 
 const DEMOS = [
   {
@@ -79,10 +80,10 @@ const DEMOS = [
     Component: BarrierDemo,
   },
   {
-    id: 'nn-html',
-    title: 'NN & Backpropagation Treatise (HTML)',
-    description: 'Standalone interactive document on backpropagation.',
-    href: `${import.meta.env.BASE_URL}nn-demo.html`,
+    id: 'nn-demo',
+    title: 'Neural Networks & Backpropagation',
+    description: 'Three-part walkthrough: forward pass with sliders, training with live loss/gradient visualization, and learned-vs-target heatmaps.',
+    Component: NNDemo,
   },
 ];
 
