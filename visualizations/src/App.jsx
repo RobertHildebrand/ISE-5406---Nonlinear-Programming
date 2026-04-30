@@ -9,6 +9,7 @@ import NewtonDemo from '../newton_demo.jsx';
 import LineSearchDemo from '../linesearch_demo.jsx';
 import BarrierDemo from '../barrier_demo.jsx';
 import PerceptronTutorial from '../perceptron_tutorial.jsx';
+import SGDAdamTutorial from '../sgd_adam_tutorial.jsx';
 
 const DEMOS = [
   {
@@ -46,6 +47,12 @@ const DEMOS = [
     title: 'Perceptron Code Walkthrough',
     description: 'Side-by-side: Python pseudocode with the active line highlighted, scatter plot updating each step.',
     Component: PerceptronTutorial,
+  },
+  {
+    id: 'sgd-adam-tutorial',
+    title: 'SGD & Adam — Code Stepper',
+    description: 'In-class demo: step through SGD, momentum, and Adam line-by-line; live trajectory and value panel; PyTorch comparison at the bottom.',
+    Component: SGDAdamTutorial,
   },
   {
     id: 'kkt',
