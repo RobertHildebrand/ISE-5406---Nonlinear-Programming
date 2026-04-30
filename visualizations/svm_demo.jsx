@@ -51,7 +51,20 @@ function dsLinTight(seed = 7, n = 30) {
   }
   return pts;
 }
-function dsXOR(seed = 3, n = 60) {
+function dsBlobs(seed = 2, n = 30, noise = 0.55, flipProb = 0) {
+  // SVM-friendly version of two blobs that scales spread with noise.
+  const rng = mulberry32(seed);
+  const pts = [];
+  for (let i = 0; i < n / 2; i++) {
+    pts.push({ x: 1.4 + noise * randn(rng), y: 1.0 + noise * randn(rng), label: 1 });
+  }
+  for (let i = 0; i < n / 2; i++) {
+    pts.push({ x: -1.4 + noise * randn(rng), y: -1.0 + noise * randn(rng), label: -1 });
+  }
+  applyLabelFlips(pts, rng, flipProb);
+  return pts;
+}
+function dsXOR(seed = 3, n = 60, noise = 0.4, flipProb = 0) {
   const rng = mulberry32(seed);
   const pts = [];
   const centers = [
@@ -62,51 +75,60 @@ function dsXOR(seed = 3, n = 60) {
   ];
   for (let i = 0; i < n; i++) {
     const c = centers[i % 4];
-    pts.push({ x: c[0] + 0.4 * randn(rng), y: c[1] + 0.4 * randn(rng), label: c[2] });
+    pts.push({ x: c[0] + noise * randn(rng), y: c[1] + noise * randn(rng), label: c[2] });
   }
+  applyLabelFlips(pts, rng, flipProb);
   return pts;
 }
-function dsMoons(seed = 4, n = 60) {
+function dsMoons(seed = 4, n = 60, noise = 0.18, flipProb = 0) {
   const rng = mulberry32(seed);
   const pts = [];
   for (let i = 0; i < n / 2; i++) {
     const t = Math.PI * (i / (n / 2 - 1));
     pts.push({
-      x: 1.5 * Math.cos(t) - 0.6 + 0.12 * randn(rng),
-      y: 1.5 * Math.sin(t) - 0.4 + 0.12 * randn(rng),
+      x: 1.5 * Math.cos(t) - 0.6 + noise * randn(rng),
+      y: 1.5 * Math.sin(t) - 0.4 + noise * randn(rng),
       label: 1,
     });
   }
   for (let i = 0; i < n / 2; i++) {
     const t = Math.PI * (i / (n / 2 - 1));
     pts.push({
-      x: 1.5 * Math.cos(t) + 0.6 + 0.12 * randn(rng),
-      y: -1.5 * Math.sin(t) + 0.4 + 0.12 * randn(rng),
+      x: 1.5 * Math.cos(t) + 0.6 + noise * randn(rng),
+      y: -1.5 * Math.sin(t) + 0.4 + noise * randn(rng),
       label: -1,
     });
   }
+  applyLabelFlips(pts, rng, flipProb);
   return pts;
 }
-function dsCircles(seed = 5, n = 70) {
+function dsCircles(seed = 5, n = 70, noise = 0.18, flipProb = 0) {
   const rng = mulberry32(seed);
   const pts = [];
   for (let i = 0; i < n / 2; i++) {
     const t = 2 * Math.PI * (i / (n / 2));
     pts.push({
-      x: 0.6 * Math.cos(t) + 0.1 * randn(rng),
-      y: 0.6 * Math.sin(t) + 0.1 * randn(rng),
+      x: 0.6 * Math.cos(t) + noise * randn(rng),
+      y: 0.6 * Math.sin(t) + noise * randn(rng),
       label: 1,
     });
   }
   for (let i = 0; i < n / 2; i++) {
     const t = 2 * Math.PI * (i / (n / 2));
     pts.push({
-      x: 1.8 * Math.cos(t) + 0.13 * randn(rng),
-      y: 1.8 * Math.sin(t) + 0.13 * randn(rng),
+      x: 1.8 * Math.cos(t) + noise * randn(rng),
+      y: 1.8 * Math.sin(t) + noise * randn(rng),
       label: -1,
     });
   }
+  applyLabelFlips(pts, rng, flipProb);
   return pts;
+}
+function applyLabelFlips(pts, rng, flipProb) {
+  if (!flipProb) return;
+  for (const p of pts) {
+    if (rng() < flipProb) p.label = -p.label;
+  }
 }
 
 // ---------------- Kernels ----------------
@@ -459,10 +481,22 @@ function PerceptronViz() {
 // KERNEL SVM SECTION
 // ============================================================
 const SVM_DATASETS = {
-  blobs: { name: "Two Blobs (linear-friendly)", make: () => dsLinSeparable(2, 30) },
-  xor: { name: "XOR (needs nonlinear)", make: () => dsXOR(3, 60) },
-  moons: { name: "Moons", make: () => dsMoons(4, 60) },
-  circles: { name: "Concentric Circles", make: () => dsCircles(5, 70) },
+  blobs: {
+    name: "Two Blobs (linear-friendly)",
+    make: (seed, noise, flipProb) => dsBlobs(seed, 30, 0.55 + noise, flipProb),
+  },
+  xor: {
+    name: "XOR (needs nonlinear)",
+    make: (seed, noise, flipProb) => dsXOR(seed, 60, 0.4 + noise, flipProb),
+  },
+  moons: {
+    name: "Moons",
+    make: (seed, noise, flipProb) => dsMoons(seed, 60, 0.18 + noise, flipProb),
+  },
+  circles: {
+    name: "Concentric Circles",
+    make: (seed, noise, flipProb) => dsCircles(seed, 70, 0.18 + noise, flipProb),
+  },
 };
 
 const KERNELS = {
@@ -483,7 +517,10 @@ const KERNELS = {
 
 function KernelSVMViz() {
   const [datasetKey, setDatasetKey] = useState("xor");
-  const [data, setData] = useState(() => SVM_DATASETS.xor.make());
+  const [noise, setNoise] = useState(0.15);
+  const [flipProb, setFlipProb] = useState(0.05);
+  const [seed, setSeed] = useState(3);
+  const [data, setData] = useState(() => SVM_DATASETS.xor.make(3, 0.15, 0.05));
   const [kernelKey, setKernelKey] = useState("rbf");
   const [params, setParams] = useState({
     degree: 3,
@@ -494,10 +531,14 @@ function KernelSVMViz() {
   const [model, setModel] = useState(null);
   const [training, setTraining] = useState(false);
 
+  // Whenever dataset / noise / flipProb / seed changes, regenerate.
+  useEffect(() => {
+    setData(SVM_DATASETS[datasetKey].make(seed, noise, flipProb));
+    setModel(null);
+  }, [datasetKey, noise, flipProb, seed]);
+
   const reloadDataset = (key) => {
     setDatasetKey(key);
-    setData(SVM_DATASETS[key].make());
-    setModel(null);
   };
   const setKernel = (key) => {
     setKernelKey(key);
@@ -737,15 +778,42 @@ function KernelSVMViz() {
             />
           </div>
 
+          <div style={controlGroup}>
+            <label style={label}>
+              extra noise (cluster spread): <b>{noise.toFixed(2)}</b>
+            </label>
+            <input
+              type="range"
+              min={0}
+              max={0.5}
+              step={0.01}
+              value={noise}
+              onChange={(e) => setNoise(+e.target.value)}
+              style={{ width: "100%" }}
+            />
+          </div>
+
+          <div style={controlGroup}>
+            <label style={label}>
+              label flip probability: <b>{(100 * flipProb).toFixed(0)}%</b>
+            </label>
+            <input
+              type="range"
+              min={0}
+              max={0.25}
+              step={0.01}
+              value={flipProb}
+              onChange={(e) => setFlipProb(+e.target.value)}
+              style={{ width: "100%" }}
+            />
+          </div>
+
           <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
             <button onClick={train} disabled={training} style={btnPrimary}>
               <Zap size={16} /> {training ? "Training…" : "Train"}
             </button>
             <button
-              onClick={() => {
-                setData(SVM_DATASETS[datasetKey].make());
-                setModel(null);
-              }}
+              onClick={() => setSeed((s) => s + 1)}
               style={btn}
             >
               <RotateCcw size={16} /> New Sample
@@ -769,8 +837,11 @@ function KernelSVMViz() {
             <b>Tips.</b> XOR / Circles / Moons are not linearly separable — the linear
             kernel will plateau at low accuracy. Try RBF with γ ≈ 1, or polynomial of
             degree 2–3. Larger <code style={code}>C</code> = harder margin (less
-            tolerance for misclassification). Dashed circles mark support vectors
-            (data points that pin down the boundary).
+            tolerance for misclassification). Use the <b>noise</b> and{" "}
+            <b>label flip</b> sliders to add overlap and mislabeled points so the data
+            is not perfectly separable — that's where the soft margin earns its keep.
+            Dashed circles mark support vectors (data points that pin down the
+            boundary).
           </p>
         </div>
       </div>
