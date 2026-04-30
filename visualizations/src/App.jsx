@@ -3,6 +3,7 @@ import NeuralNetViz from '../nn_viz.jsx';
 import OptimDemo from '../optim_demo.jsx';
 import StepAnatomy from '../step_anatomy.jsx';
 import SVMDemo from '../svm_demo.jsx';
+import Optim3DDemo from '../optim3d_demo.jsx';
 
 const DEMOS = [
   {
@@ -13,9 +14,15 @@ const DEMOS = [
   },
   {
     id: 'optim',
-    title: 'First-Order Optimization Methods',
+    title: 'First-Order Optimization Methods (2D)',
     description: 'Compare gradient descent, momentum, Adam, etc. on 2D test functions.',
     Component: OptimDemo,
+  },
+  {
+    id: 'optim3d',
+    title: 'First-Order Methods in 3D',
+    description: 'Same methods, but now you can rotate the loss surface and watch trajectories descend.',
+    Component: Optim3DDemo,
   },
   {
     id: 'step',
