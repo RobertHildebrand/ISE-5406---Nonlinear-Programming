@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import NeuralNetViz from '../nn_viz.jsx';
 import OptimDemo from '../optim_demo.jsx';
 import StepAnatomy from '../step_anatomy.jsx';
+import SVMDemo from '../svm_demo.jsx';
 
 const DEMOS = [
   {
@@ -21,6 +22,12 @@ const DEMOS = [
     title: 'Anatomy of a Step',
     description: 'Step-by-step walkthrough of one optimization iteration.',
     Component: StepAnatomy,
+  },
+  {
+    id: 'svm',
+    title: 'Perceptron & Kernel SVM',
+    description: 'Step through the perceptron algorithm, then train kernel SVMs (linear / polynomial / RBF).',
+    Component: SVMDemo,
   },
   {
     id: 'nn-html',
