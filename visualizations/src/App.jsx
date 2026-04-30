@@ -4,6 +4,11 @@ import OptimDemo from '../optim_demo.jsx';
 import StepAnatomy from '../step_anatomy.jsx';
 import SVMDemo from '../svm_demo.jsx';
 import Optim3DDemo from '../optim3d_demo.jsx';
+import KKTDemo from '../kkt_demo.jsx';
+import NewtonDemo from '../newton_demo.jsx';
+import LineSearchDemo from '../linesearch_demo.jsx';
+import BarrierDemo from '../barrier_demo.jsx';
+import PerceptronTutorial from '../perceptron_tutorial.jsx';
 
 const DEMOS = [
   {
@@ -35,6 +40,36 @@ const DEMOS = [
     title: 'Perceptron & Kernel SVM',
     description: 'Step through the perceptron algorithm, then train kernel SVMs (linear / polynomial / RBF).',
     Component: SVMDemo,
+  },
+  {
+    id: 'perceptron-tutorial',
+    title: 'Perceptron Code Walkthrough',
+    description: 'Side-by-side: Python pseudocode with the active line highlighted, scatter plot updating each step.',
+    Component: PerceptronTutorial,
+  },
+  {
+    id: 'kkt',
+    title: 'Constrained Optimization & KKT',
+    description: 'Feasible region, active constraints, Lagrange multipliers, and the KKT balance ∇f = −Σ λᵢ ∇gᵢ.',
+    Component: KKTDemo,
+  },
+  {
+    id: 'newton',
+    title: 'Newton vs. First-Order',
+    description: 'Newton step lands at the local quadratic model’s minimum. Compare against gradient descent on the same surface.',
+    Component: NewtonDemo,
+  },
+  {
+    id: 'linesearch',
+    title: 'Line Search (Armijo / Wolfe)',
+    description: 'Slide α along φ(α) = f(x + αd); see which step sizes satisfy Armijo and strong-Wolfe conditions.',
+    Component: LineSearchDemo,
+  },
+  {
+    id: 'barrier',
+    title: 'Interior Point / Log Barrier',
+    description: 'Sweep the barrier parameter and watch the central path approach the LP optimum.',
+    Component: BarrierDemo,
   },
   {
     id: 'nn-html',
