@@ -12,6 +12,11 @@ import PerceptronTutorial from '../perceptron_tutorial.jsx';
 import SGDAdamTutorial from '../sgd_adam_tutorial.jsx';
 import NNDemo from '../nn_demo.jsx';
 import PyomoTutorial from '../pyomo_tutorial.jsx';
+import CVXPYTutorial from '../cvxpy_tutorial.jsx';
+import ScipyTutorial from '../scipy_tutorial.jsx';
+import ScipTutorial from '../scip_tutorial.jsx';
+import PyTorchTutorial from '../pytorch_tutorial.jsx';
+import MLCompare from '../ml_compare.jsx';
 
 // ---------- Categories (display order) ----------
 const CATEGORIES = [
@@ -176,6 +181,46 @@ const DEMOS = [
     description:
       'Build three NLPs (constrained QP, disk-projection, Markowitz portfolio) line-by-line in Pyomo and watch IPOPT solve them. Includes install instructions.',
     Component: PyomoTutorial,
+  },
+  {
+    id: 'cvxpy-tutorial',
+    category: 'tutorials',
+    title: 'CVXPY — Code Stepper',
+    description:
+      'Step through LP, QP, SOCP, and SDP examples in CVXPY. Watch how the same Variable / Constraint / Problem pattern adapts as the problem class changes.',
+    Component: CVXPYTutorial,
+  },
+  {
+    id: 'scipy-tutorial',
+    category: 'tutorials',
+    title: 'scipy.optimize — Code Stepper',
+    description:
+      'Rosenbrock from x₀ = (-1.5, 2.0). Compare derivative-free, first-order, and second-order methods — Nelder-Mead, BFGS, Newton-CG, trust-ncg, and friends. Side-by-side nfev/njev/nhev/nit table.',
+    Component: ScipyTutorial,
+  },
+  {
+    id: 'scip-tutorial',
+    category: 'tutorials',
+    title: 'SCIP / PySCIPOpt — Code Stepper',
+    description:
+      'MILP and MINLP examples (knapsack, set cover, integer rectangle with bilinear constraint). Step through PySCIPOpt code and see SCIP\'s primal/dual bounds and B&B node count.',
+    Component: ScipTutorial,
+  },
+  {
+    id: 'pytorch-tutorial',
+    category: 'tutorials',
+    title: 'PyTorch — Code Stepper',
+    description:
+      'Three classic ML problems with the same training-loop skeleton: linear regression, binary classification, and a small MLP on nonlinear data. State panel renders the model architecture and loss curve.',
+    Component: PyTorchTutorial,
+  },
+  {
+    id: 'ml-compare',
+    category: 'tutorials',
+    title: 'ML — Same Problem, Three Ways',
+    description:
+      'Same binary-classification problem solved three ways: scikit-learn (high-level), PyTorch (mid-level), and from scratch with NumPy. Side-by-side code, pros/cons, and a comparison table.',
+    Component: MLCompare,
   },
 ];
 
