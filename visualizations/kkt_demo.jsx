@@ -1129,13 +1129,31 @@ export default function KKTDemo() {
         <h2 style={{ ...h2, fontSize: 16 }}>Legend</h2>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 18, fontSize: 13 }}>
           <LegendSwatch color={COLOR_F} label="∇f / contours of f" />
+          <LegendSwatch color="#d4a017" label="−∇f" arrow />
           <LegendSwatch color={COLOR_FEASIBLE} label="feasible region" filled />
           <LegendSwatch color={COLOR_G1} label="g₁ boundary (line)" />
           <LegendSwatch color={COLOR_G2} label="g₂ boundary (circle)" />
           <LegendSwatch color={COLOR_G3} label="g₃ boundary (wall)" />
+          <LegendSwatch color="#a02822" label="∇gᵢ (active)" arrow />
+          <LegendSwatch color="#f5a524" label="normal cone at x*" wedge />
           <LegendSwatch color="#111" label="x* (constrained)" filled />
           <LegendSwatch color={COLOR_F} label="x̂ (unconstrained)" outline />
         </div>
+        <p
+          style={{
+            marginTop: 14,
+            color: "#555",
+            fontSize: 13,
+            lineHeight: 1.5,
+            maxWidth: 720,
+          }}
+        >
+          The shaded yellow wedge is the <b>normal cone</b> to the feasible
+          set at <b>x*</b> — the conic hull of the active constraint
+          gradients <code style={code}>{"{Σᵢ λᵢ ∇gᵢ(x*) : λᵢ ≥ 0, i ∈ A(x*)}"}</code>.
+          KKT stationarity is exactly the geometric statement{" "}
+          <b>−∇f ∈ N_C(x*)</b>: there's no feasible direction in which f decreases.
+        </p>
       </section>
     </div>
   );
@@ -1151,9 +1169,32 @@ function Stat({ label, value }) {
   );
 }
 
-function LegendSwatch({ color, label, filled, outline }) {
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+function LegendSwatch({ color, label, filled, outline, arrow, wedge }) {
+  let swatch;
+  if (arrow) {
+    swatch = (
+      <svg width={22} height={16} style={{ display: "block" }}>
+        <line x1={2} y1={8} x2={14} y2={8} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+        <polygon points="20,8 14,5 14,11" fill={color} />
+      </svg>
+    );
+  } else if (wedge) {
+    // A small wedge — shaded fill + dashed outline, matching ActiveCone styling.
+    swatch = (
+      <svg width={20} height={16} style={{ display: "block" }}>
+        <polygon points="3,14 17,2 17,14" fill={color} opacity={0.22} />
+        <polygon
+          points="3,14 17,2 17,14"
+          fill="none"
+          stroke={color}
+          strokeWidth={1}
+          strokeDasharray="3 2"
+          opacity={0.7}
+        />
+      </svg>
+    );
+  } else {
+    swatch = (
       <span
         style={{
           display: "inline-block",
@@ -1168,6 +1209,11 @@ function LegendSwatch({ color, label, filled, outline }) {
             : `2px solid ${color}`,
         }}
       />
+    );
+  }
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+      {swatch}
       <span style={{ color: "#444", fontFamily: "monospace" }}>{label}</span>
     </span>
   );
