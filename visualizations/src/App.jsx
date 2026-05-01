@@ -17,6 +17,7 @@ import ScipyTutorial from '../scipy_tutorial.jsx';
 import ScipTutorial from '../scip_tutorial.jsx';
 import PyTorchTutorial from '../pytorch_tutorial.jsx';
 import MLCompare from '../ml_compare.jsx';
+import NLPApplications from '../nlp_applications.jsx';
 
 // ---------- Categories (display order) ----------
 const CATEGORIES = [
@@ -221,6 +222,14 @@ const DEMOS = [
     description:
       'Same binary-classification problem solved three ways: scikit-learn (high-level), PyTorch (mid-level), and from scratch with NumPy. Side-by-side code, pros/cons, and a comparison table.',
     Component: MLCompare,
+  },
+  {
+    id: 'nlp-applications',
+    category: 'tutorials',
+    title: 'NLP Applications — Code Stepper',
+    description:
+      'Four NLP applications across four domains: rocket trajectory (optimal control), cantilever beam (engineering), robust regression (statistics), open-top container (geometric programming). All in Pyomo + IPOPT.',
+    Component: NLPApplications,
   },
 ];
 
