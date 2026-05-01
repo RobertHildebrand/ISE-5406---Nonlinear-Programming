@@ -275,6 +275,167 @@ function paramsFor(fnKey) {
   return out;
 }
 
+// ---------- Curated presets per (function, algo) ----------
+// kind ∈ {"good", "bad", "slow"}. Click a chip to splat values into params[k].
+// The "good" entry doubles as the tuned default; "bad" demonstrates breakdown
+// (divergence, oscillation); "slow" shows the other failure mode.
+const PRESETS = {
+  quad_ill: {
+    gd: [
+      { name: "tuned", kind: "good", params: { lr: 0.02 }, tip: "stable zigzag along the steep y-axis" },
+      { name: "near-optimal", kind: "good", params: { lr: 0.075 }, tip: "lr ≈ 2/(L+m) = 2/26 — fastest stable rate" },
+      { name: "diverges", kind: "bad", params: { lr: 0.085 }, tip: "lr > 2/L = 0.08 — y component blows up" },
+      { name: "slow", kind: "slow", params: { lr: 0.003 }, tip: "step too small — many iters to reach origin" },
+    ],
+    heavyball: [
+      { name: "tuned", kind: "good", params: { lr: 0.015, momentum: 0.9 } },
+      { name: "high mom", kind: "bad", params: { lr: 0.03, momentum: 0.97 }, tip: "momentum overshoots, oscillates wildly" },
+      { name: "no mom", kind: "slow", params: { lr: 0.015, momentum: 0.0 }, tip: "degenerates to plain GD" },
+    ],
+    nesterov: [
+      { name: "tuned", kind: "good", params: { lr: 0.015, momentum: 0.9 } },
+      { name: "diverges", kind: "bad", params: { lr: 0.05, momentum: 0.95 } },
+      { name: "weak mom", kind: "slow", params: { lr: 0.015, momentum: 0.3 } },
+    ],
+    adagrad: [
+      { name: "tuned", kind: "good", params: { lr: 0.5 } },
+      { name: "aggressive", kind: "good", params: { lr: 3.0 }, tip: "AdaGrad self-normalizes — large lr is OK" },
+      { name: "tiny", kind: "slow", params: { lr: 0.05 } },
+    ],
+    rmsprop: [
+      { name: "tuned", kind: "good", params: { lr: 0.05, beta: 0.9 } },
+      { name: "diverges", kind: "bad", params: { lr: 0.6, beta: 0.9 } },
+      { name: "low beta", kind: "bad", params: { lr: 0.05, beta: 0.3 }, tip: "near-AdaGrad, but with high lr unstable" },
+    ],
+    adam: [
+      { name: "tuned", kind: "good", params: { lr: 0.1, b1: 0.9, b2: 0.999 } },
+      { name: "diverges", kind: "bad", params: { lr: 1.5, b1: 0.9, b2: 0.999 } },
+      { name: "low b1", kind: "good", params: { lr: 0.1, b1: 0.3, b2: 0.999 }, tip: "less momentum — closer to RMSProp" },
+    ],
+  },
+  quad_well: {
+    gd: [
+      { name: "tuned", kind: "good", params: { lr: 0.5 } },
+      { name: "optimal", kind: "good", params: { lr: 1.0 }, tip: "lr = 1/L — converges in one step from any start" },
+      { name: "diverges", kind: "bad", params: { lr: 2.05 }, tip: "lr > 2/L — bounces away" },
+      { name: "slow", kind: "slow", params: { lr: 0.05 } },
+    ],
+    heavyball: [
+      { name: "tuned", kind: "good", params: { lr: 0.3, momentum: 0.9 } },
+      { name: "oscillates", kind: "bad", params: { lr: 0.3, momentum: 0.99 }, tip: "near-unit momentum sustains overshoot" },
+    ],
+    nesterov: [
+      { name: "tuned", kind: "good", params: { lr: 0.3, momentum: 0.9 } },
+      { name: "oscillates", kind: "bad", params: { lr: 0.5, momentum: 0.95 } },
+    ],
+    adagrad: [{ name: "tuned", kind: "good", params: { lr: 0.5 } }],
+    rmsprop: [{ name: "tuned", kind: "good", params: { lr: 0.05, beta: 0.9 } }],
+    adam: [{ name: "tuned", kind: "good", params: { lr: 0.1, b1: 0.9, b2: 0.999 } }],
+  },
+  rosenbrock: {
+    gd: [
+      { name: "tuned", kind: "good", params: { lr: 0.0015 }, tip: "creeps along the valley floor — converges very slowly" },
+      { name: "diverges", kind: "bad", params: { lr: 0.005 }, tip: "valley curvature kicks the iterate out, gradient explodes" },
+      { name: "slow", kind: "slow", params: { lr: 0.0003 } },
+    ],
+    heavyball: [
+      { name: "tuned", kind: "good", params: { lr: 0.0008, momentum: 0.85 } },
+      { name: "diverges", kind: "bad", params: { lr: 0.003, momentum: 0.9 } },
+      { name: "high mom", kind: "bad", params: { lr: 0.0008, momentum: 0.99 }, tip: "velocity outruns the valley — loops or diverges" },
+    ],
+    nesterov: [
+      { name: "tuned", kind: "good", params: { lr: 0.0006, momentum: 0.88 } },
+      { name: "diverges", kind: "bad", params: { lr: 0.002, momentum: 0.9 }, tip: "lookahead lands in steep wall — gradient explodes" },
+      { name: "high mom", kind: "bad", params: { lr: 0.0006, momentum: 0.99 } },
+    ],
+    adagrad: [
+      { name: "tuned", kind: "good", params: { lr: 0.5 } },
+      { name: "aggressive", kind: "good", params: { lr: 3.0 } },
+    ],
+    rmsprop: [
+      { name: "tuned", kind: "good", params: { lr: 0.02, beta: 0.9 } },
+      { name: "diverges", kind: "bad", params: { lr: 0.2, beta: 0.9 } },
+    ],
+    adam: [
+      { name: "tuned", kind: "good", params: { lr: 0.05, b1: 0.9, b2: 0.999 } },
+      { name: "diverges", kind: "bad", params: { lr: 0.5, b1: 0.9, b2: 0.999 } },
+      { name: "low b2", kind: "bad", params: { lr: 0.05, b1: 0.9, b2: 0.5 }, tip: "stale 2nd moment makes step erratic" },
+    ],
+  },
+  himmelblau: {
+    gd: [
+      { name: "tuned", kind: "good", params: { lr: 0.005 } },
+      { name: "diverges", kind: "bad", params: { lr: 0.02 }, tip: "Himmelblau's 4th-order growth amplifies large steps" },
+      { name: "slow", kind: "slow", params: { lr: 0.001 } },
+    ],
+    heavyball: [
+      { name: "tuned", kind: "good", params: { lr: 0.003, momentum: 0.85 } },
+      { name: "diverges", kind: "bad", params: { lr: 0.02, momentum: 0.9 } },
+    ],
+    nesterov: [
+      { name: "tuned", kind: "good", params: { lr: 0.004, momentum: 0.9 } },
+      { name: "diverges", kind: "bad", params: { lr: 0.02, momentum: 0.9 } },
+    ],
+    adagrad: [{ name: "tuned", kind: "good", params: { lr: 0.5 } }],
+    rmsprop: [
+      { name: "tuned", kind: "good", params: { lr: 0.05, beta: 0.9 } },
+      { name: "diverges", kind: "bad", params: { lr: 0.5, beta: 0.9 } },
+    ],
+    adam: [
+      { name: "tuned", kind: "good", params: { lr: 0.1, b1: 0.9, b2: 0.999 } },
+      { name: "diverges", kind: "bad", params: { lr: 1.0, b1: 0.9, b2: 0.999 } },
+    ],
+  },
+  beale: {
+    gd: [
+      { name: "tuned", kind: "good", params: { lr: 0.005 } },
+      { name: "diverges", kind: "bad", params: { lr: 0.02 }, tip: "Beale's gradient is huge off-valley — small lr is mandatory" },
+      { name: "slow", kind: "slow", params: { lr: 0.001 } },
+    ],
+    heavyball: [
+      { name: "tuned", kind: "good", params: { lr: 0.002, momentum: 0.85 } },
+      { name: "diverges", kind: "bad", params: { lr: 0.01, momentum: 0.9 } },
+    ],
+    nesterov: [
+      { name: "tuned", kind: "good", params: { lr: 0.003, momentum: 0.9 } },
+      { name: "diverges", kind: "bad", params: { lr: 0.015, momentum: 0.9 } },
+    ],
+    adagrad: [{ name: "tuned", kind: "good", params: { lr: 0.3 } }],
+    rmsprop: [
+      { name: "tuned", kind: "good", params: { lr: 0.02, beta: 0.9 } },
+      { name: "diverges", kind: "bad", params: { lr: 0.2, beta: 0.9 } },
+    ],
+    adam: [
+      { name: "tuned", kind: "good", params: { lr: 0.05, b1: 0.9, b2: 0.999 } },
+      { name: "diverges", kind: "bad", params: { lr: 0.5, b1: 0.9, b2: 0.999 } },
+    ],
+  },
+  saddle: {
+    gd: [
+      { name: "tuned", kind: "good", params: { lr: 0.02 }, tip: "with y₀ ≠ 0, escapes the saddle exponentially" },
+      { name: "explodes", kind: "bad", params: { lr: 0.5 }, tip: "lr > 1 — |1+2lr|>1 in y, blows up to ±∞" },
+      { name: "slow escape", kind: "slow", params: { lr: 0.005 } },
+    ],
+    heavyball: [
+      { name: "tuned", kind: "good", params: { lr: 0.01, momentum: 0.7 } },
+      { name: "explodes", kind: "bad", params: { lr: 0.05, momentum: 0.9 } },
+    ],
+    nesterov: [
+      { name: "tuned", kind: "good", params: { lr: 0.01, momentum: 0.7 } },
+      { name: "explodes", kind: "bad", params: { lr: 0.05, momentum: 0.9 } },
+    ],
+    adagrad: [{ name: "tuned", kind: "good", params: { lr: 0.3 } }],
+    rmsprop: [
+      { name: "tuned", kind: "good", params: { lr: 0.05, beta: 0.9 } },
+      { name: "explodes", kind: "bad", params: { lr: 0.5, beta: 0.9 } },
+    ],
+    adam: [
+      { name: "tuned", kind: "good", params: { lr: 0.05, b1: 0.9, b2: 0.999 } },
+      { name: "explodes", kind: "bad", params: { lr: 0.5, b1: 0.9, b2: 0.999 } },
+    ],
+  },
+};
+
 // ---------- Contour drawing ----------
 function drawContours(ctx, fn, box, levels, W, H) {
   const [xmin, xmax, ymin, ymax] = box;
@@ -816,6 +977,29 @@ export default function OptimDemo() {
                 <div style={S.algoHead}>
                   <span style={S.algoName}>{ALGOS[k].name}</span>
                 </div>
+                {PRESETS[fnKey] && PRESETS[fnKey][k] && (
+                  <div style={S.presetRow}>
+                    {PRESETS[fnKey][k].map((preset) => (
+                      <button
+                        key={preset.name}
+                        style={{ ...S.presetBtn, ...S.presetKind[preset.kind] }}
+                        title={preset.tip || preset.name}
+                        onClick={() =>
+                          setParams((p) => ({
+                            ...p,
+                            [k]: {
+                              ...ALGOS[k].params,
+                              ...(fnDef.tuned[k] || {}),
+                              ...preset.params,
+                            },
+                          }))
+                        }
+                      >
+                        {preset.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {Object.entries(params[k]).map(([pname, pval]) => {
                   // Adapt range so the slider always centers on the tuned value
                   const isLr = pname === "lr";
@@ -1189,6 +1373,27 @@ const S = {
   algoName: {
     fontStyle: "italic",
     fontSize: 13,
+  },
+  presetRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 4,
+    marginBottom: 8,
+  },
+  presetBtn: {
+    padding: "2px 7px",
+    fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
+    fontSize: 10,
+    letterSpacing: "0.04em",
+    border: "1px solid",
+    background: "transparent",
+    cursor: "pointer",
+    borderRadius: 0,
+  },
+  presetKind: {
+    good: { color: "#7dd87d", borderColor: "rgba(125,216,125,0.45)" },
+    bad: { color: "#ff8b8b", borderColor: "rgba(255,139,139,0.45)" },
+    slow: { color: "rgba(232,226,208,0.55)", borderColor: "rgba(232,226,208,0.25)" },
   },
   plotWrap: {
     position: "relative",

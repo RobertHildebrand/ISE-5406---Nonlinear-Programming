@@ -11,82 +11,282 @@ import BarrierDemo from '../barrier_demo.jsx';
 import PerceptronTutorial from '../perceptron_tutorial.jsx';
 import SGDAdamTutorial from '../sgd_adam_tutorial.jsx';
 import NNDemo from '../nn_demo.jsx';
+import PyomoTutorial from '../pyomo_tutorial.jsx';
 
-const DEMOS = [
+// ---------- Categories (display order) ----------
+const CATEGORIES = [
   {
-    id: 'nn',
-    title: 'Neural Network Visualization',
-    description: 'Interactive 8x8 digit classifier — watch forward/backprop in action.',
-    Component: NeuralNetViz,
+    id: 'foundations',
+    title: 'Foundations',
+    blurb: 'Build intuition for what one optimization step actually does.',
+    accent: '#1f4e3d',
   },
   {
+    id: 'first-order',
+    title: 'First-Order Methods',
+    blurb: 'Gradient descent, momentum, Nesterov, RMSProp, Adam — and how to size their steps.',
+    accent: '#1f4e3d',
+  },
+  {
+    id: 'second-order',
+    title: 'Second-Order Methods',
+    blurb: "Newton's method and the local quadratic model.",
+    accent: '#1f4e3d',
+  },
+  {
+    id: 'constrained',
+    title: 'Constrained Optimization',
+    blurb: 'Feasible regions, active sets, KKT conditions, and interior-point methods.',
+    accent: '#d4a017',
+  },
+  {
+    id: 'classification',
+    title: 'Classification & Kernels',
+    blurb: 'Perceptron and SVM with linear, polynomial, and RBF kernels.',
+    accent: '#1f4e3d',
+  },
+  {
+    id: 'neural-nets',
+    title: 'Neural Networks',
+    blurb: 'Forward and backward pass, training, learned vs target.',
+    accent: '#1f4e3d',
+  },
+  {
+    id: 'tutorials',
+    title: 'In-Class Code Steppers',
+    blurb: 'Walk through algorithm code line-by-line for live lecture demonstration.',
+    accent: '#c8311c',
+  },
+];
+
+const DEMOS = [
+  // ── Foundations ────────────────────────────────────────────────
+  {
+    id: 'step',
+    category: 'foundations',
+    title: 'Anatomy of a Step',
+    description:
+      'One optimization iteration in slow motion: gradient, descent direction, step size, and the resulting move.',
+    Component: StepAnatomy,
+  },
+
+  // ── First-order methods ────────────────────────────────────────
+  {
     id: 'optim',
-    title: 'First-Order Optimization Methods (2D)',
-    description: 'Compare gradient descent, momentum, Adam, etc. on 2D test functions.',
+    category: 'first-order',
+    title: 'First-Order Methods (2D)',
+    description:
+      'Compare GD, momentum, Nesterov, RMSProp, Adam on 2D test functions. Watch trajectories on the contour plot.',
     Component: OptimDemo,
   },
   {
     id: 'optim3d',
-    title: 'First-Order Methods in 3D',
-    description: 'Same methods, but now you can rotate the loss surface and watch trajectories descend.',
+    category: 'first-order',
+    title: 'First-Order Methods (3D)',
+    description:
+      'Same methods, but rotate the loss surface and watch trajectories descend in 3D. Tunable start point.',
     Component: Optim3DDemo,
   },
   {
-    id: 'step',
-    title: 'Anatomy of a Step',
-    description: 'Step-by-step walkthrough of one optimization iteration.',
-    Component: StepAnatomy,
+    id: 'linesearch',
+    category: 'first-order',
+    title: 'Line Search (Armijo / Wolfe)',
+    description:
+      'Slide α along φ(α) = f(x + α·d). See which step sizes satisfy Armijo and strong-Wolfe; animate backtracking.',
+    Component: LineSearchDemo,
   },
+
+  // ── Second-order ───────────────────────────────────────────────
+  {
+    id: 'newton',
+    category: 'second-order',
+    title: 'Newton vs. First-Order',
+    description:
+      "Newton lands at the local quadratic model's minimum. Compare against gradient descent on the same surface.",
+    Component: NewtonDemo,
+  },
+
+  // ── Constrained ────────────────────────────────────────────────
+  {
+    id: 'kkt',
+    category: 'constrained',
+    title: 'Constrained Optimization & KKT',
+    description:
+      'Feasible region, active constraints, Lagrange multipliers, and the KKT balance ∇f + Σ λᵢ ∇gᵢ = 0.',
+    Component: KKTDemo,
+  },
+  {
+    id: 'barrier',
+    category: 'constrained',
+    title: 'Interior Point / Log Barrier',
+    description:
+      'Sweep the barrier parameter t through LPs, SOCPs, and SDPs. Watch the central path bend through different feasible regions.',
+    Component: BarrierDemo,
+  },
+
+  // ── Classification & kernels ───────────────────────────────────
   {
     id: 'svm',
+    category: 'classification',
     title: 'Perceptron & Kernel SVM',
-    description: 'Step through the perceptron algorithm, then train kernel SVMs (linear / polynomial / RBF).',
+    description:
+      'Step through the perceptron algorithm, then train kernel SVMs (linear / polynomial / RBF) with adjustable noise and label flips.',
     Component: SVMDemo,
   },
+
+  // ── Neural networks ────────────────────────────────────────────
+  {
+    id: 'nn-demo',
+    category: 'neural-nets',
+    title: 'Neural Networks & Backpropagation',
+    description:
+      'Three-part walkthrough: forward pass with sliders, training with live loss curve and gradient halos, learned-vs-target heatmaps.',
+    Component: NNDemo,
+  },
+  {
+    id: 'nn',
+    category: 'neural-nets',
+    title: '8×8 Digit Classifier',
+    description:
+      'A small NN classifies hand-drawn 8×8 digit patterns. Watch every neuron activate during forward and backward propagation.',
+    Component: NeuralNetViz,
+  },
+
+  // ── In-class tutorials ─────────────────────────────────────────
   {
     id: 'perceptron-tutorial',
-    title: 'Perceptron Code Walkthrough',
-    description: 'Side-by-side: Python pseudocode with the active line highlighted, scatter plot updating each step.',
+    category: 'tutorials',
+    title: 'Perceptron — Code Walkthrough',
+    description:
+      'Python pseudocode on the left with the active line highlighted; scatter plot on the right updates each step. For live in-class demonstration.',
     Component: PerceptronTutorial,
   },
   {
     id: 'sgd-adam-tutorial',
+    category: 'tutorials',
     title: 'SGD & Adam — Code Stepper',
-    description: 'In-class demo: step through SGD, momentum, and Adam line-by-line; live trajectory and value panel; PyTorch comparison at the bottom.',
+    description:
+      'Step through SGD, momentum, and Adam line-by-line on a logistic-regression problem. PyTorch comparison at the bottom.',
     Component: SGDAdamTutorial,
   },
   {
-    id: 'kkt',
-    title: 'Constrained Optimization & KKT',
-    description: 'Feasible region, active constraints, Lagrange multipliers, and the KKT balance ∇f = −Σ λᵢ ∇gᵢ.',
-    Component: KKTDemo,
-  },
-  {
-    id: 'newton',
-    title: 'Newton vs. First-Order',
-    description: 'Newton step lands at the local quadratic model’s minimum. Compare against gradient descent on the same surface.',
-    Component: NewtonDemo,
-  },
-  {
-    id: 'linesearch',
-    title: 'Line Search (Armijo / Wolfe)',
-    description: 'Slide α along φ(α) = f(x + αd); see which step sizes satisfy Armijo and strong-Wolfe conditions.',
-    Component: LineSearchDemo,
-  },
-  {
-    id: 'barrier',
-    title: 'Interior Point / Log Barrier',
-    description: 'Sweep the barrier parameter and watch the central path approach the LP optimum.',
-    Component: BarrierDemo,
-  },
-  {
-    id: 'nn-demo',
-    title: 'Neural Networks & Backpropagation',
-    description: 'Three-part walkthrough: forward pass with sliders, training with live loss/gradient visualization, and learned-vs-target heatmaps.',
-    Component: NNDemo,
+    id: 'pyomo-tutorial',
+    category: 'tutorials',
+    title: 'Pyomo + IPOPT — Code Stepper',
+    description:
+      'Build three NLPs (constrained QP, disk-projection, Markowitz portfolio) line-by-line in Pyomo and watch IPOPT solve them. Includes install instructions.',
+    Component: PyomoTutorial,
   },
 ];
 
+// ---------- Subcomponents ----------
+function DemoCard({ demo, onClick }) {
+  const isTutorial = demo.category === 'tutorials';
+  return (
+    <button onClick={onClick} style={cardStyle(isTutorial)}>
+      <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 6, color: '#111' }}>
+        {demo.title}
+      </div>
+      <div style={{ fontSize: 13.5, color: '#555', lineHeight: 1.45 }}>
+        {demo.description}
+      </div>
+      {isTutorial && (
+        <div
+          style={{
+            marginTop: 10,
+            display: 'inline-block',
+            padding: '2px 8px',
+            background: '#fdecea',
+            color: '#c8311c',
+            borderRadius: 4,
+            fontFamily: 'monospace',
+            fontSize: 10.5,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            fontWeight: 600,
+          }}
+        >
+          for instructor demo
+        </div>
+      )}
+    </button>
+  );
+}
+
+function cardStyle(isTutorial) {
+  return {
+    display: 'block',
+    textAlign: 'left',
+    padding: '18px 20px',
+    border: '1px solid #e3e3e3',
+    borderLeft: isTutorial ? '4px solid #c8311c' : '1px solid #e3e3e3',
+    borderRadius: 10,
+    background: '#fff',
+    cursor: 'pointer',
+    textDecoration: 'none',
+    color: 'inherit',
+    transition: 'all 0.12s',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+    width: '100%',
+    fontFamily: 'inherit',
+  };
+}
+
+function CategorySection({ category, demos, onLaunch }) {
+  if (demos.length === 0) return null;
+  return (
+    <section style={{ marginBottom: 36 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: 12,
+          paddingBottom: 8,
+          marginBottom: 16,
+          borderBottom: `2px solid ${category.accent}`,
+        }}
+      >
+        <h2
+          style={{
+            fontSize: 20,
+            fontWeight: 800,
+            color: '#111',
+            margin: 0,
+          }}
+        >
+          {category.title}
+        </h2>
+        <span
+          style={{
+            fontFamily: 'monospace',
+            fontSize: 11,
+            color: '#888',
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+          }}
+        >
+          {demos.length} demo{demos.length === 1 ? '' : 's'}
+        </span>
+      </div>
+      <p style={{ color: '#666', marginTop: -6, marginBottom: 14, fontSize: 14 }}>
+        {category.blurb}
+      </p>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+          gap: 14,
+        }}
+      >
+        {demos.map((d) => (
+          <DemoCard key={d.id} demo={d} onClick={() => onLaunch(d.id)} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ---------- Top-level ----------
 export default function App() {
   const [active, setActive] = useState(null);
 
@@ -130,67 +330,106 @@ export default function App() {
     );
   }
 
-  return (
-    <div
-      style={{
-        maxWidth: 960,
-        margin: '0 auto',
-        padding: '60px 24px',
-      }}
-    >
-      <h1 style={{ fontSize: 36, fontWeight: 800, marginBottom: 8 }}>
-        ISE 5406 — Visualizations
-      </h1>
-      <p style={{ color: '#555', marginBottom: 36 }}>
-        Click a card to launch a demo.
-      </p>
+  // Group demos by category, preserving DEMOS order within each.
+  const byCategory = Object.fromEntries(CATEGORIES.map((c) => [c.id, []]));
+  for (const d of DEMOS) {
+    if (byCategory[d.category]) byCategory[d.category].push(d);
+  }
 
+  return (
+    <div style={{ minHeight: '100vh', background: '#f7f5f0' }}>
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: 16,
+          maxWidth: 1100,
+          margin: '0 auto',
+          padding: '56px 24px 80px',
         }}
       >
-        {DEMOS.map((d) => {
-          const cardStyle = {
-            display: 'block',
-            textAlign: 'left',
-            padding: 20,
-            border: '1px solid #ddd',
-            borderRadius: 12,
-            background: '#fff',
-            cursor: 'pointer',
-            textDecoration: 'none',
-            color: 'inherit',
-            transition: 'all 0.15s',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-          };
-          const inner = (
-            <>
-              <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>
-                {d.title}
-              </div>
-              <div style={{ fontSize: 14, color: '#666' }}>{d.description}</div>
-            </>
-          );
-          if (d.href) {
-            return (
-              <a key={d.id} href={d.href} style={cardStyle}>
-                {inner}
-              </a>
-            );
-          }
-          return (
-            <button
-              key={d.id}
-              onClick={() => setActive(d.id)}
-              style={cardStyle}
-            >
-              {inner}
-            </button>
-          );
-        })}
+        {/* Header */}
+        <header
+          style={{
+            paddingBottom: 22,
+            marginBottom: 36,
+            borderBottom: '1px solid #d4cfc4',
+          }}
+        >
+          <div
+            style={{
+              fontFamily: 'monospace',
+              fontSize: 11,
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              color: '#666',
+              marginBottom: 10,
+            }}
+          >
+            ISE 5406 · Nonlinear Programming · Spring 2026
+          </div>
+          <h1
+            style={{
+              fontSize: 38,
+              fontWeight: 800,
+              marginBottom: 8,
+              color: '#111',
+              lineHeight: 1.05,
+            }}
+          >
+            Interactive Visualizations
+          </h1>
+          <p
+            style={{
+              color: '#555',
+              fontSize: 16,
+              maxWidth: 720,
+              lineHeight: 1.5,
+            }}
+          >
+            A collection of interactive demos for the course. Click any card
+            to launch its demo — every one runs in the browser with no install.
+            Demos marked <i>"for instructor demo"</i> are designed to walk
+            through algorithm code line by line during lecture.
+          </p>
+          <div
+            style={{
+              marginTop: 14,
+              fontFamily: 'monospace',
+              fontSize: 12,
+              color: '#888',
+            }}
+          >
+            {DEMOS.length} demos · {CATEGORIES.length} sections
+          </div>
+        </header>
+
+        {/* Sections */}
+        {CATEGORIES.map((c) => (
+          <CategorySection
+            key={c.id}
+            category={c}
+            demos={byCategory[c.id]}
+            onLaunch={setActive}
+          />
+        ))}
+
+        {/* Footer */}
+        <footer
+          style={{
+            marginTop: 60,
+            paddingTop: 22,
+            borderTop: '1px solid #d4cfc4',
+            color: '#888',
+            fontSize: 12,
+            fontFamily: 'monospace',
+          }}
+        >
+          source ·{' '}
+          <a
+            href="https://github.com/RobertHildebrand/ISE-5406---Nonlinear-Programming"
+            style={{ color: '#666' }}
+          >
+            github.com/RobertHildebrand/ISE-5406---Nonlinear-Programming
+          </a>
+        </footer>
       </div>
     </div>
   );
