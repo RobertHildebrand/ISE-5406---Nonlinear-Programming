@@ -18,6 +18,7 @@ import ScipTutorial from '../scip_tutorial.jsx';
 import PyTorchTutorial from '../pytorch_tutorial.jsx';
 import MLCompare from '../ml_compare.jsx';
 import NLPApplications from '../nlp_applications.jsx';
+import ISEApplications from '../ise_applications.jsx';
 
 // ---------- Categories (display order) ----------
 const CATEGORIES = [
@@ -230,6 +231,14 @@ const DEMOS = [
     description:
       'Four NLP applications across four domains: rocket trajectory (optimal control), cantilever beam (engineering), robust regression (statistics), open-top container (geometric programming). All in Pyomo + IPOPT.',
     Component: NLPApplications,
+  },
+  {
+    id: 'ise-applications',
+    category: 'tutorials',
+    title: 'ISE Applications — Code Stepper',
+    description:
+      'Four classics ISE students should recognize: EOQ with backordering (inventory), Weber facility location (logistics), multi-period production smoothing (production), multi-product newsvendor with budget (inventory under uncertainty).',
+    Component: ISEApplications,
   },
 ];
 
