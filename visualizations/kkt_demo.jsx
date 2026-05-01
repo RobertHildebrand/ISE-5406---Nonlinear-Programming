@@ -589,10 +589,64 @@ export default function KKTDemo() {
 
   // Solve.
   const solution = useMemo(() => {
-    const [xs, ys] = solvePGD(problem);
+    const [xsRaw, ysRaw] = solvePGD(problem);
+
+    // PGD's greedy projection ping-pongs near a vertex: whichever constraint
+    // is projected onto LAST is exactly tight, the others are ~10⁻²ish off.
+    // Snap to the intersection of all loosely-active constraints via Newton
+    // before classifying the active set.
+    const TOL_LOOSE = 0.05;
+    const candidates = [];
+    problem.constraints.forEach((c, idx) => {
+      const v = c.g(xsRaw, ysRaw);
+      if (v >= -TOL_LOOSE) candidates.push({ idx, c });
+    });
+
+    let xs = xsRaw,
+      ys = ysRaw;
+    for (let it = 0; it < 50 && candidates.length > 0; it++) {
+      const grads = candidates.map(({ c }) => c.grad(xs, ys));
+      const vals = candidates.map(({ c }) => c.g(xs, ys));
+      const maxAbs = Math.max(...vals.map((v) => Math.abs(v)));
+      if (maxAbs < 1e-12) break;
+      if (candidates.length === 1) {
+        const [a, b] = grads[0];
+        const nn = a * a + b * b;
+        if (nn < 1e-14) break;
+        xs -= (vals[0] / nn) * a;
+        ys -= (vals[0] / nn) * b;
+      } else if (candidates.length === 2) {
+        const [a1, b1] = grads[0];
+        const [a2, b2] = grads[1];
+        const det = a1 * b2 - a2 * b1;
+        if (Math.abs(det) < 1e-12) break; // degenerate, keep PGD point
+        const dx = (-vals[0] * b2 + vals[1] * b1) / det;
+        const dy = (vals[0] * a2 - vals[1] * a1) / det;
+        xs += dx;
+        ys += dy;
+        if (Math.hypot(dx, dy) < 1e-12) break;
+      } else {
+        // 3+ candidates in 2D is over-determined — fall back.
+        break;
+      }
+    }
+    // Safety: if the snap pushed us infeasible by more than the loose tol,
+    // revert to the raw PGD point.
+    let okSnap = true;
+    for (const c of problem.constraints) {
+      if (c.g(xs, ys) > 0.05) {
+        okSnap = false;
+        break;
+      }
+    }
+    if (!okSnap) {
+      xs = xsRaw;
+      ys = ysRaw;
+    }
+
     const [gx, gy] = problem.grad_f(xs, ys);
-    // Determine active set.
-    const tol = 1e-3;
+    // Determine active set with a tight post-snap tolerance.
+    const tol = 5e-4;
     const active = [];
     const inactive = [];
     problem.constraints.forEach((c, idx) => {
