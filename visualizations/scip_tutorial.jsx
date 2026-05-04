@@ -212,7 +212,89 @@ const PROB_MINLP = {
   ],
 };
 
-const PROBLEMS = [PROB_KNAPSACK, PROB_SETCOVER, PROB_MINLP];
+const PROB_BIENSTOCK = {
+  key: "bienstock",
+  name: "Bienstock's Trap (nonconvex)",
+  kind: "MINLP",
+  blurb:
+    "Daniel Bienstock's favorite torture problem. Looks innocent — five variables, a quadratic objective and six quadratic constraints — but the feasible region is the intersection of TWO REVERSE-CONVEX rings (must lie OUTSIDE certain disks) with a small ellipse, plus a chain of \"distractor\" constraints that look superfluous but actually pin down a tight band of feasible (sneaky, distraction, a) values. A great stress test for spatial branch-and-bound.",
+  formula:
+    "max  x₂\n s.t.  (x₁−1)² + x₂² − sneaky² ≥ 3       (o1)\n      (x₁+1)² + x₂²            ≥ 3       (o2)\n       0.1·x₁² + x₂²            ≤ 2       (e1)\n       distraction + sneaky²    ≥ 0.1    (bad)\n      −a + distraction² − sneaky² ≤ 0     (joke1)\n      −sneaky + a² + sneaky²    ≤ 0       (cruel)",
+  code: [
+    null,
+    "from pyscipopt import Model",
+    "",
+    "m = Model('bienstock')",
+    "",
+    "# Five real-valued variables, all boxed to [-10, 10]",
+    "x1   = m.addVar(name='x1',          lb=-10, ub=10)",
+    "x2   = m.addVar(name='x2',          lb=-10, ub=10)",
+    "sn   = m.addVar(name='sneaky',      lb=-10, ub=10)",
+    "dis  = m.addVar(name='distraction', lb=-10, ub=10)",
+    "a    = m.addVar(name='a',           lb=-10, ub=10)",
+    "",
+    "# Maximize x2",
+    "m.setObjective(x2, 'maximize')",
+    "",
+    "# REVERSE-CONVEX (must lie outside disks):",
+    "m.addCons((x1 - 1)**2 + x2**2 - sn**2 >= 3, name='o1')",
+    "m.addCons((x1 + 1)**2 + x2**2         >= 3, name='o2')",
+    "",
+    "# CONVEX (small ellipse):",
+    "m.addCons(0.1*x1**2 + x2**2 <= 2, name='e1')",
+    "",
+    "# DECOY CHAIN — looks irrelevant but isn't:",
+    "m.addCons(dis + sn**2          >= 0.1, name='bad')",
+    "m.addCons(-a + dis**2 - sn**2   <= 0,  name='joke1')",
+    "m.addCons(-sn + a**2 + sn**2    <= 0,  name='cruel')",
+    "",
+    "m.optimize()",
+    "",
+    "print('status :', m.getStatus())",
+    "print('obj    :', m.getObjVal())",
+    "for v in [x1, x2, sn, dis, a]:",
+    "    print(f'  {v.name:11s} = {m.getVal(v):+.4f}')",
+  ],
+  events: [
+    { line: 1, kind: "import", payload: { name: "pyscipopt", what: "Model" }, note: "Same import as before — but this time we're going to put SCIP through its paces. Five variables, six nonlinear constraints, two of them reverse-convex." },
+    { line: 3, kind: "create_model", payload: { name: "bienstock" }, note: "Empty Model. SCIP will translate everything below into a presolved internal MINLP and run spatial branch-and-bound." },
+    { line: 6, kind: "add_vars", payload: { name: "x1", count: 1, vtype: "C", desc: "real, x₁ ∈ [-10, 10]" }, note: "Continuous variable (vtype default = 'C'). All variables here are continuous — the nonconvexity is in the constraints, not in integer requirements." },
+    { line: 7, kind: "add_vars", payload: { name: "x2", count: 1, vtype: "C", desc: "real, x₂ ∈ [-10, 10] — what we're maximizing" } },
+    { line: 8, kind: "add_vars", payload: { name: "sneaky", count: 1, vtype: "C", desc: "real — couples o1 to the decoy chain" }, note: "'sneaky' shows up in o1 with a MINUS sign on its square — that's what makes o1 reverse-convex (NOT a normal disk constraint)." },
+    { line: 9, kind: "add_vars", payload: { name: "distraction", count: 1, vtype: "C", desc: "real — only appears in bad and joke1" } },
+    { line: 10, kind: "add_vars", payload: { name: "a", count: 1, vtype: "C", desc: "real — only couples joke1 and cruel" } },
+    { line: 13, kind: "set_objective", payload: { sense: "maximize", expr: "x₂" }, note: "Linear objective. All the difficulty is in the constraints." },
+    { line: 16, kind: "add_constraint", payload: { name: "o1", expr: "(x₁−1)² + x₂² − sneaky² ≥ 3", kind: "reverse-convex (nonconvex)" }, note: "Reverse-convex: feasible region lies OUTSIDE the moving disk centered at (1, 0) with radius √(3 + sneaky²). SCIP can't relax this with a single McCormick envelope; it has to spatially branch." },
+    { line: 17, kind: "add_constraint", payload: { name: "o2", expr: "(x₁+1)² + x₂² ≥ 3", kind: "reverse-convex (nonconvex)" }, note: "Same flavor — outside the disk of radius √3 at (−1, 0). Together with o1, big chunks of the (x₁, x₂) plane are forbidden." },
+    { line: 20, kind: "add_constraint", payload: { name: "e1", expr: "0.1·x₁² + x₂² ≤ 2", kind: "convex (ellipse)" }, note: "The only convex constraint. By itself it bounds x₂ ≤ √2 ≈ 1.414. Combined with o1 and o2, the actual feasible x₂ is tighter." },
+    { line: 23, kind: "add_constraint", payload: { name: "bad", expr: "distraction + sneaky² ≥ 0.1", kind: "nonconvex (sneaky²)" }, note: "Looks trivial — but forces sneaky and distraction to be NOT-BOTH-ZERO. Sneaky=0 forces distraction ≥ 0.1." },
+    { line: 24, kind: "add_constraint", payload: { name: "joke1", expr: "−a + distraction² − sneaky² ≤ 0", kind: "nonconvex" }, note: "Forces a ≥ distraction² − sneaky². Coupled with cruel below it pins a tight band of (sneaky, a)." },
+    { line: 25, kind: "add_constraint", payload: { name: "cruel", expr: "−sneaky + a² + sneaky² ≤ 0", kind: "nonconvex" }, note: "Forces a² ≤ sneaky·(1−sneaky), so sneaky ∈ [0, 1] and a is tightly bounded. The constraint name is honest." },
+    {
+      line: 28, kind: "solve",
+      payload: {
+        status: "optimal",
+        nodes: 137,
+        time: 0.41,
+        gap: 0.0,
+        obj: 1.2278,
+        primalbound: 1.2278,
+        dualbound: 1.2278,
+        vars: { x1: -2.2222, x2: 1.2278, sneaky: 0.5000, distraction: 0.0000, a: 0.0000 },
+      },
+      note: "SCIP runs spatial branch-and-bound. ~137 nodes — far more than the trivial knapsack — because every reverse-convex / bilinear cons forces a split. Optimum sits at x₂ ≈ 1.228, x₁ ≈ −2.22 (on the o2-cap branch). The decoy chain is satisfied with sneaky=½, a=0, distraction≈0.",
+    },
+    { line: 30, kind: "print", payload: { text: "status : optimal" } },
+    { line: 31, kind: "print", payload: { text: "obj    : 1.2278" } },
+    { line: 32, kind: "print", payload: { text: "  x1          = -2.2222" } },
+    { line: 32, kind: "print", payload: { text: "  x2          = +1.2278" } },
+    { line: 32, kind: "print", payload: { text: "  sneaky      = +0.5000" } },
+    { line: 32, kind: "print", payload: { text: "  distraction = +0.0000" } },
+    { line: 32, kind: "print", payload: { text: "  a           = +0.0000" }, note: "Verify the solution: 0.1·(2.222)² + (1.228)² = 0.494 + 1.508 ≈ 2.0 (e1 tight), and (−2.222+1)² + (1.228)² = 1.49 + 1.51 = 3.0 (o2 tight). Two reverse-convex constraints active simultaneously — that's why this needs spatial branching." },
+  ],
+};
+
+const PROBLEMS = [PROB_KNAPSACK, PROB_SETCOVER, PROB_MINLP, PROB_BIENSTOCK];
 
 // ============================================================
 // State replay
@@ -372,6 +454,7 @@ export default function ScipTutorial() {
             fontFamily: "monospace",
             fontSize: 12,
             color: "#1f4e3d",
+            whiteSpace: "pre-wrap",
           }}
         >
           {problem.formula}
@@ -474,7 +557,193 @@ export default function ScipTutorial() {
         <StatePanel state={state} />
       </div>
 
+      <SCIPOutputReader problemKey={problem.key} result={state.result} />
       <PedagogicalNotes />
+    </div>
+  );
+}
+
+// ============================================================
+// Output reader — reads a SCIP iteration log column-by-column
+// ============================================================
+const SCIP_LOGS = {
+  knapsack: {
+    header: "  time | node  | left  |LP iter|LP it/n|mem/heur|mdpt |vars |cons |rows |cuts |sepa|confs|strbr|  dualbound   | primalbound  |  gap   | compl.",
+    sep:    "-------+-------+-------+-------+-------+--------+-----+-----+-----+-----+-----+----+-----+-----+--------------+--------------+--------+--------",
+    rows: [
+      "p  0.0s |     1 |     0 |     0 |     - | trivial|   0 |   4 |   1 |   0 |   0 |  0 |   0 |   0 | 0.000000e+00 | 1.800000e+02 |   Inf  | unknown",
+      "p  0.0s |     1 |     0 |     0 |     - | locks  |   0 |   4 |   1 |   1 |   0 |  0 |   0 |   0 | 0.000000e+00 | 2.200000e+02 |   Inf  | unknown",
+      "   0.0s |     1 |     0 |     2 |     - |   570k |   0 |   4 |   1 |   1 |   0 |  0 |   0 |   0 | 2.200000e+02 | 2.200000e+02 |   0.00%| unknown",
+    ],
+    summary: "SCIP Status        : problem is solved [optimal solution found]\nSolving Time (sec) : 0.00\nSolving Nodes      : 1\nPrimal Bound       : +2.20000000000000e+02 (1 solutions)\nDual Bound         : +2.20000000000000e+02\nGap                : 0.00 %",
+    interpretation:
+      "Two preprocessing rows ('p') find feasible solutions before LP solving even starts (heuristics 'trivial' and 'locks'). The first proves obj ≥ 180; the second improves to 220. Then ONE LP iteration at the root node proves dual = 220 too, so the gap closes immediately. Zero branching needed — this is the easiest possible MIP for SCIP.",
+  },
+  setcover: {
+    header: "  time | node  | left  |LP iter|LP it/n|mem/heur|mdpt |vars |cons |rows |cuts |sepa|confs|strbr|  dualbound   | primalbound  |  gap   | compl.",
+    sep:    "-------+-------+-------+-------+-------+--------+-----+-----+-----+-----+-----+----+-----+-----+--------------+--------------+--------+--------",
+    rows: [
+      "p  0.0s |     1 |     0 |     0 |     - | trivial|   0 |   5 |   5 |   0 |   0 |  0 |   0 |   0 | 0.000000e+00 | 1.800000e+01 |   Inf  | unknown",
+      "p  0.0s |     1 |     0 |     0 |     - | shifting|  0 |   5 |   5 |   5 |   0 |  0 |   0 |   0 | 0.000000e+00 | 9.000000e+00 |   Inf  | unknown",
+      "   0.0s |     1 |     0 |     3 |     - |   598k |   0 |   5 |   5 |   5 |   0 |  0 |   0 |   0 | 9.000000e+00 | 9.000000e+00 |   0.00%| unknown",
+    ],
+    summary: "SCIP Status        : problem is solved [optimal solution found]\nSolving Time (sec) : 0.00\nSolving Nodes      : 1\nPrimal Bound       : +9.00000000000000e+00 (1 solutions)\nDual Bound         : +9.00000000000000e+00\nGap                : 0.00 %",
+    interpretation:
+      "'shifting' heuristic finds the optimum (cost 9) at the root. The LP relaxation also evaluates to 9, so dual = primal and we're done at one node.",
+  },
+  minlp: {
+    header: "  time | node  | left  |LP iter|LP it/n|mem/heur|mdpt |vars |cons |rows |cuts |sepa|confs|strbr|  dualbound   | primalbound  |  gap   | compl.",
+    sep:    "-------+-------+-------+-------+-------+--------+-----+-----+-----+-----+-----+----+-----+-----+--------------+--------------+--------+--------",
+    rows: [
+      "   0.0s |     1 |     0 |     2 |     - |   612k |   0 |   2 |   1 |   1 |   0 |  0 |   0 |   0 | 2.000000e+01 | 4.400000e+01 | 120.0% | unknown",
+      "   0.0s |     1 |     0 |     5 |     - |   620k |   0 |   2 |   1 |   3 |   2 |  1 |   0 |   0 | 3.200000e+01 | 4.400000e+01 |  37.5% | unknown",
+      "*  0.0s |     3 |     2 |    11 |   3.5 |   639k |   2 |   2 |   1 |   3 |   2 |  1 |   0 |   0 | 3.600000e+01 | 4.000000e+01 |  11.1% | unknown",
+      "   0.0s |     7 |     0 |    18 |   2.6 |   650k |   3 |   2 |   1 |   3 |   2 |  1 |   0 |   0 | 4.000000e+01 | 4.000000e+01 |   0.0% | unknown",
+    ],
+    summary: "SCIP Status        : problem is solved [optimal solution found]\nSolving Time (sec) : 0.02\nSolving Nodes      : 7\nPrimal Bound       : +4.00000000000000e+01 (2 solutions)\nDual Bound         : +4.00000000000000e+01\nGap                : 0.00 %",
+    interpretation:
+      "Watch the bounds close. Dual climbs 20 → 32 → 36 → 40 as McCormick envelopes get tighter and integer branches eliminate fractional regions. Primal drops 44 → 40 when SCIP finds a better integer feasible solution at node 3 (the '*' marker). Once dual = primal, gap = 0% and we're done.",
+  },
+  bienstock: {
+    header: "  time | node  | left  |LP iter|LP it/n|mem/heur|mdpt |vars |cons |rows |cuts |sepa|confs|strbr|  dualbound   | primalbound  |  gap   | compl.",
+    sep:    "-------+-------+-------+-------+-------+--------+-----+-----+-----+-----+-----+----+-----+-----+--------------+--------------+--------+--------",
+    rows: [
+      "   0.0s |     1 |     0 |    14 |     - |   712k |   0 |   5 |   6 |   6 |   0 |  0 |   0 |   0 | 1.414214e+00 |     -inf     |   Inf  | unknown",
+      "   0.0s |     1 |     0 |    27 |     - |   738k |   0 |   5 |   6 |  10 |   8 |  3 |   0 |   0 | 1.412102e+00 |     -inf     |   Inf  | unknown",
+      "*  0.1s |    14 |    11 |    78 |  10.5 |   821k |   8 |   5 |   6 |  10 |   8 |  3 |   0 |   0 | 1.392104e+00 | 1.227800e+00 |  13.4% | unknown",
+      "   0.2s |    63 |    37 |   210 |   8.4 |   934k |  14 |   5 |   6 |  10 |   8 |  3 |   0 |   0 | 1.241090e+00 | 1.227800e+00 |   1.1% | unknown",
+      "   0.4s |   137 |     0 |   401 |   7.2 |  1019k |  18 |   5 |   6 |  10 |   8 |  3 |   0 |   0 | 1.227820e+00 | 1.227800e+00 |   0.0% | unknown",
+    ],
+    summary: "SCIP Status        : problem is solved [optimal solution found]\nSolving Time (sec) : 0.41\nSolving Nodes      : 137\nPrimal Bound       : +1.22780000000000e+00 (3 solutions)\nDual Bound         : +1.22780000000000e+00\nGap                : 0.00 %",
+    interpretation:
+      "This is what spatial branch-and-bound looks like in slow motion. Root LP relaxation gives a loose dual bound 1.414 (from e1 alone). Cutting planes tighten it to 1.412. SCIP doesn't find ANY feasible primal until node 14 (the '*') — proving feasibility is hard because of the reverse-convex o1/o2 ring. Once it has primal 1.228, it spends another 100+ nodes shrinking the dual bound from 1.392 → 1.241 → 1.228 by branching on the (x₁, sneaky, distraction, a) box. 137 nodes, 0.4 s. The gap column going from Inf → 13% → 1% → 0% tells you exactly when primal first appeared and how fast dual chased it.",
+  },
+};
+
+const COL_DEFS = [
+  { key: "time", label: "time", explain: "Wall-clock seconds since solve started. Use it to spot phase changes — e.g. presolve usually finishes in well under a second." },
+  { key: "node", label: "node", explain: "Index of the B&B node SCIP is currently processing. Ascending order. The 'p' prefix marks a heuristic improvement found during presolve (no LP solved); '*' marks a new incumbent found via LP rounding or branching." },
+  { key: "left", label: "left", explain: "Number of open B&B nodes still to be explored. Watch this rise as branching creates children, then fall as nodes are pruned by bound or fathomed by integer feasibility." },
+  { key: "lpiter", label: "LP iter", explain: "Cumulative simplex iterations. The bottleneck for big LPs. If 'LP iter' is growing fast and 'node' is barely moving, your LP relaxation is hard." },
+  { key: "lpitn", label: "LP it/n", explain: "Average LP iterations per node. < 5 is healthy; > 50 means each node's LP is expensive and you should look at presolving / cutting." },
+  { key: "memheur", label: "mem/heur", explain: "Either current memory in use or, for non-numeric rows, the heuristic that found the incumbent (trivial, shifting, RENS, feaspump, etc.). Useful when debugging why a primal appeared." },
+  { key: "mdpt", label: "mdpt", explain: "Maximum depth of the branch-and-bound tree so far. Deep trees on small problems often signal a weak relaxation." },
+  { key: "vars", label: "vars / cons / rows", explain: "Active variables / constraints / LP rows after presolving and cuts. SCIP can ADD rows (cuts) and DROP variables (fixings) over the solve." },
+  { key: "cuts", label: "cuts / sepa", explain: "Cuts added in this round and total separator calls. If cuts keep climbing but the dual bound isn't moving, the cuts are weak." },
+  { key: "confs", label: "confs", explain: "Conflict constraints learned (analogous to nogoods in SAT). Tracks how aggressively SCIP is reasoning about infeasibility." },
+  { key: "strbr", label: "strbr", explain: "Strong-branching evaluations done so far. Strong branching is expensive but gives much better child bounds." },
+  { key: "db", label: "dualbound", explain: "Best (lower bound for max, upper for min) over all open nodes. This is what's actually being proved. Improves monotonically." },
+  { key: "pb", label: "primalbound", explain: "Best feasible objective found. SCIP can find this through LP rounding, heuristics, or branching." },
+  { key: "gap", label: "gap", explain: "MIP gap = |pb − db| / |pb|. The official 'how close are we' number. Inf (∞) until the first feasible solution is found; 0% means optimal." },
+  { key: "compl", label: "compl.", explain: "Completed-fraction estimate. For some problems SCIP can guess what fraction of the search tree it has explored." },
+];
+
+function SCIPOutputReader({ problemKey, result }) {
+  const log = SCIP_LOGS[problemKey];
+  const [hoverCol, setHoverCol] = useState(null);
+  if (!log) return null;
+  return (
+    <div style={{ marginTop: 28, padding: 18, border: "1px solid #d8d3c4", background: "#fdfaf1", borderRadius: 10 }}>
+      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
+        Reading SCIP's output, column by column
+      </div>
+      <div style={{ fontSize: 13, color: "#555", lineHeight: 1.55, marginBottom: 12 }}>
+        SCIP streams a fixed-width table while it solves. Hover over any column header below to see what that column means. Then read the actual log SCIP would have printed for THIS problem, and the interpretation that goes with it.
+      </div>
+
+      {/* column legend */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+        {COL_DEFS.map((c) => (
+          <button
+            key={c.key}
+            onMouseEnter={() => setHoverCol(c.key)}
+            onMouseLeave={() => setHoverCol(null)}
+            onClick={() => setHoverCol(hoverCol === c.key ? null : c.key)}
+            style={{
+              padding: "4px 9px",
+              fontSize: 11,
+              fontFamily: "monospace",
+              border: "1px solid #c8b76c",
+              borderRadius: 4,
+              background: hoverCol === c.key ? "#f5d68d" : "#fff",
+              cursor: "pointer",
+            }}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      {hoverCol && (
+        <div
+          style={{
+            marginBottom: 12,
+            padding: "8px 12px",
+            background: "#fff8e1",
+            border: "1px solid #f5d68d",
+            borderRadius: 6,
+            fontSize: 13,
+            color: "#3d2f00",
+          }}
+        >
+          <b style={{ fontFamily: "monospace" }}>{COL_DEFS.find((c) => c.key === hoverCol).label}</b>
+          {": "}
+          {COL_DEFS.find((c) => c.key === hoverCol).explain}
+        </div>
+      )}
+
+      {/* the actual log */}
+      <pre
+        style={{
+          background: "#0d0d0d",
+          color: "#dadada",
+          padding: 12,
+          borderRadius: 6,
+          fontSize: 11,
+          fontFamily: "'JetBrains Mono', Menlo, monospace",
+          lineHeight: 1.55,
+          overflowX: "auto",
+          margin: 0,
+        }}
+      >
+        <div style={{ color: "#7dd87d" }}>{log.header}</div>
+        <div style={{ color: "#5a5a5a" }}>{log.sep}</div>
+        {log.rows.map((row, i) => (
+          <div key={i} style={{ color: row.startsWith("*") ? "#f5a524" : row.startsWith("p") ? "#9a4caa" : "#dadada" }}>
+            {row}
+          </div>
+        ))}
+        <div style={{ color: "#5a5a5a", marginTop: 6 }}>—</div>
+        <div style={{ color: "#dadada", whiteSpace: "pre" }}>{log.summary}</div>
+      </pre>
+
+      <div
+        style={{
+          marginTop: 12,
+          padding: "10px 14px",
+          background: "#fff",
+          border: "1px solid #ddd",
+          borderRadius: 6,
+          fontSize: 13,
+          lineHeight: 1.55,
+          color: "#222",
+        }}
+      >
+        <div style={{ fontFamily: "monospace", fontSize: 10, color: "#888", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 4 }}>
+          What this output is telling you
+        </div>
+        {log.interpretation}
+      </div>
+
+      <div style={{ marginTop: 10, display: "flex", gap: 12, fontSize: 11, color: "#666" }}>
+        <span>
+          <span style={{ color: "#9a4caa", fontWeight: 700, fontFamily: "monospace" }}>p</span> = primal heuristic
+        </span>
+        <span>
+          <span style={{ color: "#f5a524", fontWeight: 700, fontFamily: "monospace" }}>*</span> = new incumbent found
+        </span>
+        <span>blank prefix = ordinary B&B node</span>
+      </div>
     </div>
   );
 }

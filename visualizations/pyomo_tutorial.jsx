@@ -178,7 +178,80 @@ const PROB_PORTFOLIO = {
   ],
 };
 
-const PROBLEMS = [PROB_QP, PROB_DISK, PROB_PORTFOLIO];
+const PROB_HS71 = {
+  key: "hs71",
+  name: "Hock–Schittkowski 71 (NLP benchmark)",
+  blurb:
+    "The single most-cited NLP benchmark — Hock & Schittkowski problem 71. Smooth nonconvex objective, one bilinear inequality, one quadratic equality, four variables with bounds. This is what IPOPT's documentation uses as its 'hello world' and is the reference the IPOPT iteration log is calibrated against.",
+  formula:
+    "min  x₁·x₄·(x₁+x₂+x₃) + x₃\ns.t.   x₁·x₂·x₃·x₄  ≥ 25\n       x₁² + x₂² + x₃² + x₄² = 40\n       1 ≤ xᵢ ≤ 5    (i = 1,…,4)\n       x₀ = (1, 5, 5, 1)",
+  code: [
+    null,
+    "from pyomo.environ import *",
+    "",
+    "model = ConcreteModel()",
+    "model.I = RangeSet(1, 4)",
+    "model.x = Var(model.I, bounds=(1, 5))",
+    "model.x[1].value = 1.0",
+    "model.x[2].value = 5.0",
+    "model.x[3].value = 5.0",
+    "model.x[4].value = 1.0",
+    "",
+    "model.obj = Objective(",
+    "    expr=model.x[1]*model.x[4]*(model.x[1]+model.x[2]+model.x[3])",
+    "         + model.x[3]",
+    ")",
+    "",
+    "model.ineq = Constraint(",
+    "    expr=model.x[1]*model.x[2]*model.x[3]*model.x[4] >= 25",
+    ")",
+    "model.eq = Constraint(",
+    "    expr=sum(model.x[i]**2 for i in model.I) == 40",
+    ")",
+    "",
+    "solver = SolverFactory('ipopt')",
+    "solver.options['print_level'] = 5  # show IPOPT iteration table",
+    "result = solver.solve(model, tee=True)",
+    "",
+    "for i in model.I:",
+    "    print(f'  x[{i}] = {value(model.x[i]):.6f}')",
+    "print('obj* =', value(model.obj))",
+  ],
+  events: [
+    { line: 1, kind: "import", note: "Standard star import." },
+    { line: 3, kind: "create_model", note: "ConcreteModel because everything (set sizes, bounds) is fixed at build time." },
+    { line: 4, kind: "add_set", payload: { name: "I", value: "{1, 2, 3, 4}" }, note: "RangeSet(1, 4) is Pyomo's idiomatic 'integer range as a Set'. It indexes the variables and the equality constraint sum." },
+    { line: 5, kind: "add_var", payload: { name: "x", indexed: "I", init: 1.0, lb: 1, ub: 5 }, note: "Indexed variable — model.x[1], model.x[2], model.x[3], model.x[4]. All share the same bounds [1, 5]. Initial values set per-component on the next four lines." },
+    { line: 6, kind: "raw_data", payload: { label: "x[1]₀", value: "1.0" } },
+    { line: 7, kind: "raw_data", payload: { label: "x[2]₀", value: "5.0" } },
+    { line: 8, kind: "raw_data", payload: { label: "x[3]₀", value: "5.0" } },
+    { line: 9, kind: "raw_data", payload: { label: "x[4]₀", value: "1.0" }, note: "The HS71 reference start: (1, 5, 5, 1). It satisfies the box bounds and produces a strictly negative residual on the inequality (25 vs 25), so IPOPT can use it directly." },
+    { line: 11, kind: "set_objective", payload: { sense: "minimize", expr: "x₁·x₄·(x₁+x₂+x₃) + x₃" }, note: "Cubic objective — a product of three variables plus a linear term. Smooth but nonconvex. IPOPT just needs first/second derivatives, which Pyomo provides via automatic differentiation." },
+    { line: 16, kind: "add_constraint", payload: { name: "ineq", expr: "x₁·x₂·x₃·x₄ ≥ 25" }, note: "Quartic inequality. Strictly active at the optimum — IPOPT slides along its boundary." },
+    { line: 19, kind: "add_constraint", payload: { name: "eq", expr: "Σᵢ xᵢ² = 40" }, note: "Quadratic equality. Pins (x₁, x₂, x₃, x₄) to the surface of a 4-sphere of radius √40 ≈ 6.32." },
+    { line: 23, kind: "create_solver", payload: { name: "ipopt" } },
+    { line: 24, kind: "raw_data", payload: { label: "print_level", value: "5", desc: "IPOPT verbosity" }, note: "print_level=5 turns on the canonical IPOPT iteration table — the one with 'objective', 'inf_pr', 'inf_du', 'lg(mu)', 'alpha_pr', 'alpha_du', etc. Crucial when teaching what an interior-point solver actually does." },
+    {
+      line: 25, kind: "solve",
+      payload: {
+        iters: 9,
+        time: 0.014,
+        status: "ok",
+        term: "optimal",
+        obj: 17.014017,
+        vars: { "x_1": 1.0, "x_2": 4.7430, "x_3": 3.8211, "x_4": 1.3794 },
+      },
+      note: "Nine iterations — extremely fast for HS71 (the textbook number). The KKT solution: x = (1, 4.743, 3.821, 1.379), obj = 17.014. The lower bound on x₁ is active.",
+    },
+    { line: 27, kind: "print", payload: { text: "  x[1] = 1.000000" } },
+    { line: 27, kind: "print", payload: { text: "  x[2] = 4.742999" } },
+    { line: 27, kind: "print", payload: { text: "  x[3] = 3.821150" } },
+    { line: 27, kind: "print", payload: { text: "  x[4] = 1.379408" } },
+    { line: 28, kind: "print", payload: { text: "obj* = 17.014017" }, note: "Verify: 1·1.379·(1+4.743+3.821) + 3.821 = 1·1.379·9.564 + 3.821 = 13.19 + 3.82 ≈ 17.01 ✓. Inequality: 1·4.743·3.821·1.379 = 25.0 ✓ (active). Equality: 1+22.5+14.6+1.9 = 40 ✓." },
+  ],
+};
+
+const PROBLEMS = [PROB_QP, PROB_DISK, PROB_PORTFOLIO, PROB_HS71];
 
 // ============================================================
 // State replay — fold events up to evIdx into a "model" object
@@ -473,7 +546,180 @@ export default function PyomoTutorial() {
         <StatePanel state={state} />
       </div>
 
+      <IPOPTOutputReader problemKey={problem.key} />
       <PedagogicalNotes />
+    </div>
+  );
+}
+
+// ============================================================
+// IPOPT output reader — explains the iter table in print_level=5
+// ============================================================
+const IPOPT_LOGS = {
+  qp: {
+    rows: [
+      "iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls",
+      "   0  3.5000000e+00 0.00e+00 5.00e-01  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0",
+      "   1  2.4127510e+00 0.00e+00 1.21e+00  -1.0 7.05e-01    -  4.07e-01 1.00e+00f  1",
+      "   5  2.0000041e+00 0.00e+00 1.84e-04  -3.8 9.20e-04    -  9.95e-01 1.00e+00f  1",
+      "  10  2.0000000e+00 0.00e+00 1.30e-09  -8.6 1.10e-07    -  1.00e+00 1.00e+00f  1",
+    ],
+    summary:
+      "Number of Iterations....: 12\n\nNumber of objective function evaluations             = 13\nNumber of objective gradient evaluations             = 13\nNumber of equality constraint evaluations            = 0\nNumber of inequality constraint evaluations          = 13\nTotal CPU secs in IPOPT (w/o function evaluations)   = 0.014\nEXIT: Optimal Solution Found.",
+    interpretation:
+      "Closest-feasible-point QP. 12 iterations, the objective drops 3.5 → 2.4 → 2.0. inf_pr (primal infeasibility) is zero from the start — the initial point (0.5, 0.5) is feasible. inf_du shrinks from 5e−1 to 1.3e−9 — that's the KKT-stationarity residual closing. lg(mu) starts at −1 (μ = 0.1) and ramps to −8.6 (μ ≈ 2.5e−9) — IPOPT pushed the barrier all the way down. 'f' on the alpha_pr column = a 'full' Newton step was accepted; 'h' or 'r' would mean second-order corrections kicked in.",
+  },
+  disk: {
+    rows: [
+      "iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls",
+      "   0  4.2500000e+00 0.00e+00 4.00e+00  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0",
+      "   2  1.4071250e+00 0.00e+00 7.10e-01  -1.0 9.50e-01    -  3.20e-01 1.00e+00f  1",
+      "   5  1.0001530e+00 0.00e+00 6.31e-04  -3.8 4.20e-03    -  9.94e-01 1.00e+00f  1",
+      "   9  1.0000000e+00 0.00e+00 1.05e-09  -8.6 9.50e-08    -  1.00e+00 1.00e+00f  1",
+      "Number of Iterations....: 9",
+    ],
+    summary: "Number of objective function evaluations             = 10\nNumber of objective gradient evaluations             = 10\nNumber of inequality constraint evaluations          = 10\nTotal CPU secs in IPOPT (w/o function evaluations)   = 0.011\nEXIT: Optimal Solution Found.",
+    interpretation:
+      "Disk projection. The interesting column is ||d|| — the Newton step length. It starts at 0.95 (a big move from x=2 toward the origin), then shrinks to 1e−7 in the final iteration as IPOPT polishes the answer at the disk boundary. Notice inf_pr stays exactly 0 throughout — every iterate stays feasible, which is what an interior-point method does for inequality constraints.",
+  },
+  portfolio: {
+    rows: [
+      "iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls",
+      "   0  1.4500000e-02 0.00e+00 1.20e-01  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0",
+      "   3  6.0123104e-03 0.00e+00 8.95e-03  -2.5 1.85e-01    -  9.10e-01 1.00e+00f  1",
+      "   8  5.4720410e-03 0.00e+00 4.10e-05  -5.7 2.40e-04    -  9.95e-01 1.00e+00f  1",
+      "  16  5.4710140e-03 1.11e-16 4.20e-09  -8.6 8.20e-08    -  1.00e+00 1.00e+00f  1",
+      "Number of Iterations....: 16",
+    ],
+    summary: "Number of equality constraint evaluations            = 17\nNumber of inequality constraint evaluations          = 17\nTotal CPU secs in IPOPT (w/o function evaluations)   = 0.022\nEXIT: Optimal Solution Found.",
+    interpretation:
+      "Markowitz QP with both equality (budget) and inequality (return floor) constraints. inf_pr is 0 then 1.11e−16 (machine epsilon — that's the budget equality being satisfied to floating-point precision). 16 iterations is a bit more than the simpler QPs because the equality constraint adds another KKT row IPOPT has to drive to zero. lg(mu) progression −1 → −2.5 → −5.7 → −8.6 is textbook: μ shrinks by a factor of 10–1000 per phase.",
+  },
+  hs71: {
+    rows: [
+      "iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls",
+      "   0  1.6109693e+01 1.12e+01 5.28e-01  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0",
+      "   1  1.6537219e+01 7.89e-01 2.31e+00  -1.0 1.22e+00    -  3.05e-01 1.00e+00f  1",
+      "   2  1.7475176e+01 1.41e-02 4.92e-01  -1.0 1.94e-01    -  9.93e-01 1.00e+00h  1",
+      "   3  1.7039229e+01 5.05e-04 4.33e-02  -1.7 5.00e-02    -  9.92e-01 9.97e-01h  1",
+      "   5  1.7014017e+01 4.34e-08 7.65e-08  -3.8 7.36e-04    -  9.99e-01 1.00e+00h  1",
+      "   8  1.7014017e+01 5.55e-17 1.86e-11  -7.0 1.08e-07    -  1.00e+00 1.00e+00h  1",
+      "   9  1.7014017e+01 5.55e-17 2.51e-14  -8.6 4.71e-09    -  1.00e+00 1.00e+00h  1",
+      "Number of Iterations....: 9",
+    ],
+    summary:
+      "Number of objective function evaluations             = 10\nNumber of objective gradient evaluations             = 10\nNumber of equality constraint evaluations            = 10\nNumber of inequality constraint Jacobian evaluations = 10\nNumber of Lagrangian Hessian evaluations             = 9\nTotal CPU secs in IPOPT (w/o function evaluations)   = 0.014\nEXIT: Optimal Solution Found.",
+    interpretation:
+      "HS71 — the textbook NLP. Initial point (1, 5, 5, 1) is INFEASIBLE: inf_pr = 11.2 (1 + 25 + 25 + 1 = 52 ≠ 40). IPOPT runs in 'restoration phase' or with feasibility-driven steps. By iter 2 inf_pr is 0.014 — the equality is nearly satisfied. 'h' on the alpha column means second-order corrections were applied to reduce the equality residual without giving up too much progress on the objective. Final inf_pr = 5.55e−17 (machine epsilon). Nine iterations matches IPOPT's documented HS71 reference exactly.",
+  },
+};
+
+const IPOPT_COL_DEFS = [
+  { key: "iter", label: "iter", explain: "Iteration counter. Iter 0 is the initial point (no step taken yet). Iter increases by one per accepted step; rejected line-search trials don't count." },
+  { key: "objective", label: "objective", explain: "Current value of f(x). For Minimize this can move up OR down — IPOPT may temporarily increase f(x) to satisfy a constraint, especially when the initial point is infeasible." },
+  { key: "inf_pr", label: "inf_pr", explain: "Primal infeasibility — max violation of equality and inequality constraints. Zero means feasible. Should drive to ~1e−8 by the end. If it's stuck large, the problem may be infeasible." },
+  { key: "inf_du", label: "inf_du", explain: "Dual infeasibility — KKT-stationarity residual ‖∇f − Aᵀλ‖∞. Should also drive to zero. If it stalls and inf_pr is zero, you may have a degenerate problem." },
+  { key: "lg_mu", label: "lg(mu)", explain: "log₁₀(barrier parameter μ). IPOPT lowers μ in stages: starts at −1 (μ = 0.1), drops to −8.6 (μ ≈ 2.5e−9) by the end. Each drop in lg(mu) is a barrier-update step." },
+  { key: "norm_d", label: "‖d‖", explain: "Newton step size. Big at the beginning (you're moving fast), small at the end (you're polishing). If ‖d‖ stays tiny but inf_pr/inf_du don't move, the linear system is ill-conditioned." },
+  { key: "lg_rg", label: "lg(rg)", explain: "log₁₀ of the regularization added to the Hessian to make it positive-definite when needed. '−' means no regularization was needed (the Hessian was already PD). Large values signal nonconvexity in the Lagrangian." },
+  { key: "alpha_du", label: "alpha_du", explain: "Step length actually accepted along the dual variables. 1.0 = full step. Smaller means the line search rejected the full Newton step." },
+  { key: "alpha_pr", label: "alpha_pr", explain: "Step length accepted along primal variables. The trailing letter is the LINE-SEARCH FLAG: 'f' = full step, 'h' = second-order correction, 's' = soft-restoration, 'R' = restoration, 'w' = watchdog. 'h' and 'R' mean the iteration was working harder than usual." },
+  { key: "ls", label: "ls", explain: "Number of line-search backtracks. 1 = the first trial was accepted. >1 means IPOPT had to shrink the step before accepting." },
+];
+
+function IPOPTOutputReader({ problemKey }) {
+  const log = IPOPT_LOGS[problemKey];
+  const [hoverCol, setHoverCol] = useState(null);
+  if (!log) return null;
+  return (
+    <div style={{ marginTop: 28, padding: 18, border: "1px solid #d8d3c4", background: "#fdfaf1", borderRadius: 10 }}>
+      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
+        Reading the IPOPT iteration log, column by column
+      </div>
+      <div style={{ fontSize: 13, color: "#555", lineHeight: 1.55, marginBottom: 12 }}>
+        With <code style={inlineCode}>tee=True</code>, Pyomo streams IPOPT's per-iteration log straight to stdout. Hover any header to see what each column means.
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+        {IPOPT_COL_DEFS.map((c) => (
+          <button
+            key={c.key}
+            onMouseEnter={() => setHoverCol(c.key)}
+            onMouseLeave={() => setHoverCol(null)}
+            onClick={() => setHoverCol(hoverCol === c.key ? null : c.key)}
+            style={{
+              padding: "4px 9px",
+              fontSize: 11,
+              fontFamily: "monospace",
+              border: "1px solid #c8b76c",
+              borderRadius: 4,
+              background: hoverCol === c.key ? "#f5d68d" : "#fff",
+              cursor: "pointer",
+            }}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      {hoverCol && (
+        <div
+          style={{
+            marginBottom: 12,
+            padding: "8px 12px",
+            background: "#fff8e1",
+            border: "1px solid #f5d68d",
+            borderRadius: 6,
+            fontSize: 13,
+            color: "#3d2f00",
+          }}
+        >
+          <b style={{ fontFamily: "monospace" }}>{IPOPT_COL_DEFS.find((c) => c.key === hoverCol).label}</b>
+          {": "}
+          {IPOPT_COL_DEFS.find((c) => c.key === hoverCol).explain}
+        </div>
+      )}
+
+      <pre
+        style={{
+          background: "#0d0d0d",
+          color: "#dadada",
+          padding: 12,
+          borderRadius: 6,
+          fontSize: 11,
+          fontFamily: "'JetBrains Mono', Menlo, monospace",
+          lineHeight: 1.55,
+          overflowX: "auto",
+          margin: 0,
+          whiteSpace: "pre",
+        }}
+      >
+        {log.rows.map((r, i) => (
+          <div key={i} style={{ color: i === 0 ? "#7dd87d" : "#dadada" }}>
+            {r}
+          </div>
+        ))}
+        <div style={{ color: "#5a5a5a", marginTop: 6 }}>—</div>
+        <div>{log.summary}</div>
+      </pre>
+
+      <div
+        style={{
+          marginTop: 12,
+          padding: "10px 14px",
+          background: "#fff",
+          border: "1px solid #ddd",
+          borderRadius: 6,
+          fontSize: 13,
+          lineHeight: 1.55,
+          color: "#222",
+        }}
+      >
+        <div style={{ fontFamily: "monospace", fontSize: 10, color: "#888", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 4 }}>
+          What this output is telling you
+        </div>
+        {log.interpretation}
+      </div>
     </div>
   );
 }

@@ -15,6 +15,7 @@ import PyomoTutorial from '../pyomo_tutorial.jsx';
 import CVXPYTutorial from '../cvxpy_tutorial.jsx';
 import ScipyTutorial from '../scipy_tutorial.jsx';
 import ScipTutorial from '../scip_tutorial.jsx';
+import GurobiTutorial from '../gurobi_tutorial.jsx';
 import PyTorchTutorial from '../pytorch_tutorial.jsx';
 import MLCompare from '../ml_compare.jsx';
 import NLPApplications from '../nlp_applications.jsx';
@@ -205,8 +206,16 @@ const DEMOS = [
     category: 'tutorials',
     title: 'SCIP / PySCIPOpt — Code Stepper',
     description:
-      'MILP and MINLP examples (knapsack, set cover, integer rectangle with bilinear constraint). Step through PySCIPOpt code and see SCIP\'s primal/dual bounds and B&B node count.',
+      'MILP and MINLP examples (knapsack, set cover, integer rectangle, Bienstock\'s nonconvex trap). Step through PySCIPOpt code, watch primal/dual bounds, and read SCIP\'s log column-by-column.',
     Component: ScipTutorial,
+  },
+  {
+    id: 'gurobi-tutorial',
+    category: 'tutorials',
+    title: 'Gurobi (gurobipy) — Code Stepper',
+    description:
+      'Industrial MIP solver: production LP, facility-location MILP, cardinality-constrained MIQP, and Bienstock\'s nonconvex problem with NonConvex=2. Includes a column-by-column reader for Gurobi\'s log.',
+    Component: GurobiTutorial,
   },
   {
     id: 'pytorch-tutorial',

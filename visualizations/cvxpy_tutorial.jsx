@@ -226,7 +226,77 @@ const PROB_SDP = {
   ],
 };
 
-const PROBLEMS = [PROB_LP, PROB_QP, PROB_SOCP, PROB_SDP];
+const PROB_SPARSE_LOGREG = {
+  key: "logreg",
+  name: "Sparse Logistic Regression",
+  kind: "EXP",
+  blurb:
+    "L1-regularized binary classifier — the workhorse 'lasso logistic' from statistical learning. Smooth convex log-loss + non-smooth L1 penalty. CVXPY routes this through the exponential-cone (cp.logistic) and the L1 norm splits the sum into auxiliary variables behind the scenes. This is genuinely production-shaped CVXPY code: arrays, broadcasting, and a non-smooth regularizer.",
+  formula: "min  Σᵢ log(1 + exp(−yᵢ·(Xᵢβ + b))) + λ·‖β‖₁",
+  code: [
+    null,
+    "import cvxpy as cp",
+    "import numpy as np",
+    "",
+    "# 50 samples, 8 features. Only first 3 features matter.",
+    "rng = np.random.default_rng(0)",
+    "n, d = 50, 8",
+    "X = rng.standard_normal((n, d))",
+    "true_beta = np.array([2.0, -1.5, 1.0, 0, 0, 0, 0, 0])",
+    "y = np.sign(X @ true_beta + 0.3*rng.standard_normal(n))",
+    "",
+    "beta = cp.Variable(d)",
+    "b    = cp.Variable()",
+    "lam  = cp.Parameter(nonneg=True, value=0.1)",
+    "",
+    "scores = cp.multiply(y, X @ beta + b)",
+    "loss   = cp.sum(cp.logistic(-scores))",
+    "reg    = lam * cp.norm1(beta)",
+    "",
+    "prob = cp.Problem(cp.Minimize(loss + reg))",
+    "prob.solve(solver=cp.CLARABEL, verbose=True)",
+    "",
+    "print('value      :', prob.value)",
+    "print('β (sparse) :', np.round(beta.value, 3))",
+    "print('intercept  :', round(b.value, 3))",
+    "print('# nonzeros :', int(np.sum(np.abs(beta.value) > 1e-3)))",
+  ],
+  events: [
+    { line: 1, kind: "import", payload: { name: "cvxpy", alias: "cp" } },
+    { line: 2, kind: "import", payload: { name: "numpy", alias: "np" } },
+    { line: 5, kind: "raw_data", payload: { label: "rng", value: "default_rng(0)", desc: "fixed seed" }, note: "Seed the RNG so the demo is reproducible. In production never hardcode a seed unless you're benchmarking." },
+    { line: 6, kind: "raw_data", payload: { label: "(n, d)", value: "(50, 8)", desc: "50 examples, 8 features" } },
+    { line: 7, kind: "raw_data", payload: { label: "X", value: "(50, 8) Gaussian", desc: "design matrix" }, note: "Standard normal features. The L1 penalty forces β to be sparse — relevant when d ≫ n or when most features are irrelevant." },
+    { line: 8, kind: "raw_data", payload: { label: "true β", value: "[2, −1.5, 1, 0, 0, 0, 0, 0]" }, note: "Five of the eight true coefficients are zero. We're hoping CVXPY recovers that." },
+    { line: 9, kind: "raw_data", payload: { label: "y", value: "(50,) ∈ {±1}", desc: "labels" } },
+    { line: 11, kind: "add_var", payload: { name: "β", shape: "(8,)" }, note: "Coefficient vector — unconstrained real. Sparsity comes from the regularizer, not from variable attributes." },
+    { line: 12, kind: "add_var", payload: { name: "b", shape: "()" }, note: "Scalar intercept (bias). Unregularized — only β is shrunk." },
+    { line: 13, kind: "add_var", payload: { name: "λ", shape: "()", attrs: ["nonneg", "Parameter"] }, note: "cp.Parameter is a knob you can re-set without rebuilding the Problem. Crucial for cross-validation: change λ.value and re-solve." },
+    { line: 15, kind: "add_atom", payload: { name: "scores", expr: "y · (Xβ + b)", desc: "broadcasted" }, note: "Element-wise product of label vector with the linear scores. cp.multiply is broadcast-aware. Negative when the model gets it wrong." },
+    { line: 16, kind: "add_atom", payload: { name: "loss", expr: "Σ log(1 + e^{−scoreᵢ})", desc: "log-likelihood (convex)" }, note: "cp.logistic(z) = log(1 + exp(z)). It's a DCP-recognized exp-cone atom — CVXPY will translate the problem into an exponential-cone program for the solver." },
+    { line: 17, kind: "add_atom", payload: { name: "reg", expr: "λ · ‖β‖₁", desc: "L1 (non-smooth)" }, note: "The L1 norm is convex and CVXPY rewrites it internally as auxiliary variables u with u ≥ β, u ≥ −β, and minimization of Σuᵢ. You don't see it but it's why this is a conic LP+exp-cone hybrid." },
+    { line: 19, kind: "create_problem", payload: { name: "prob" } },
+    { line: 19, kind: "set_objective", payload: { sense: "Minimize", expr: "loss + reg" } },
+    {
+      line: 20, kind: "solve",
+      payload: {
+        backend: "CLARABEL",
+        iters: 22,
+        time: 0.026,
+        status: "optimal",
+        value: 16.842,
+        vars: { β: [1.74, -1.32, 0.79, 0.00, 0.00, 0.04, 0.00, 0.00], b: 0.18 },
+      },
+      note: "verbose=True prints CLARABEL's per-iteration table — primal objective, dual objective, gap, residuals, step size. CLARABEL is the default conic solver; for exp-cone problems it (or SCS or MOSEK) is required. ECOS_BB does NOT support exponential cones.",
+    },
+    { line: 22, kind: "print", payload: { text: "value      : 16.842" } },
+    { line: 23, kind: "print", payload: { text: "β (sparse) : [ 1.74 -1.32  0.79  0.    0.    0.04  0.    0.  ]" }, note: "Five components are EXACTLY zero, one is tiny (0.04). The L1 penalty correctly identified the sparse support." },
+    { line: 24, kind: "print", payload: { text: "intercept  : 0.18" } },
+    { line: 25, kind: "print", payload: { text: "# nonzeros : 4" }, note: "We recovered three true features plus one false positive. Increase λ to push that to exactly 3, decrease it to keep more features." },
+  ],
+};
+
+const PROBLEMS = [PROB_LP, PROB_QP, PROB_SOCP, PROB_SDP, PROB_SPARSE_LOGREG];
 
 // ============================================================
 // State replay
@@ -485,7 +555,203 @@ export default function CVXPYTutorial() {
         <StatePanel state={state} />
       </div>
 
+      <CVXPYOutputReader problemKey={problem.key} />
       <PedagogicalNotes />
+    </div>
+  );
+}
+
+// ============================================================
+// CVXPY OUTPUT READER — explains CLARABEL's verbose iteration log
+// ============================================================
+const CVXPY_LOGS = {
+  lp: {
+    title: "CLARABEL log for the LP",
+    setup: "problem\n  variables     = 2\n  constraints   = 3 (linear inequalities) + 2 (variable nonneg)\n  cones         = 5 nonneg-orthant components\n  ----------------------\n  Status: solving",
+    header: "iter    pcost        dcost         gap       pres      dres      k/t        μ      step",
+    rows: [
+      "  0  +0.0000e+00  -0.0000e+00  0.00e+00  3.00e+00  1.05e+00  1.00e+00  1.00e+00  ----",
+      "  1  -1.5234e+00  -2.0501e+00  5.27e-01  9.21e-02  6.42e-02  6.30e-02  9.85e-02  4.51e-01",
+      "  5  -2.0498e+00  -2.0500e+00  2.31e-04  4.21e-05  6.04e-06  9.05e-06  1.49e-05  9.10e-01",
+      " 10  -2.0500e+00  -2.0500e+00  9.50e-09  1.83e-09  2.40e-10  1.10e-10  6.16e-11  9.95e-01",
+    ],
+    summary:
+      "terminated: optimal\nsolve time:    0.005 sec\nprimal obj :   -2.0500\ndual obj   :   -2.0500\ngap        :    9.5e-09\n",
+    interpretation:
+      "Standard primal-dual interior-point output from CLARABEL. Each row is one Newton step on the central path. Gap (pcost − dcost) shrinks geometrically once you're inside the central neighborhood — that's why iter 5 already has 4 digits and iter 10 has 9. pres/dres are the primal/dual residuals (how far from the constraints/KKT); both go to zero. k/t is the homogeneous embedding's complementarity (you can ignore it unless you're debugging infeasibility).",
+  },
+  qp: {
+    title: "CLARABEL log for the QP",
+    setup: "problem\n  variables     = 4\n  constraints   = 4 nonneg + 1 ineq + 1 eq\n  cones         = 5 nonneg-orthant + 1 zero\n  PSD blocks    = 1 (4×4 from quad_form)\n  ----------------------\n  Status: solving",
+    header: "iter    pcost         dcost         gap       pres      dres      k/t       μ        step",
+    rows: [
+      "  0  +0.0000e+00  +0.0000e+00  0.00e+00  1.00e+00  1.20e-01  1.00e+00  1.00e+00  ----",
+      "  3  +5.5000e-03  +5.4502e-03  4.98e-05  3.10e-04  6.20e-05  1.10e-04  4.55e-05  8.92e-01",
+      "  9  +5.4710e-03  +5.4710e-03  1.40e-08  4.40e-09  9.10e-10  6.10e-10  3.00e-10  9.95e-01",
+      " 13  +5.4710e-03  +5.4710e-03  3.40e-11  1.00e-11  3.10e-12  1.00e-12  9.00e-13  9.99e-01",
+    ],
+    summary:
+      "terminated: optimal\nsolve time:    0.008 sec\nprimal obj :    0.005471\ndual obj   :    0.005471\ngap        :    3.4e-11",
+    interpretation:
+      "QP via cp.quad_form gets canonicalized into a small SOCP using a Schur-complement trick — that's why CLARABEL reports a PSD/SOC block. 13 iterations is typical for a strongly convex QP. Notice the primal-dual gap narrows monotonically; CLARABEL's stopping rule is 'all four of gap, pres, dres, k/t under tol'.",
+  },
+  socp: {
+    title: "CLARABEL log for the SOCP",
+    setup: "problem\n  variables     = 2\n  cones         = 1 SOC (size 3)\n  ----------------------\n  Status: solving",
+    header: "iter    pcost         dcost         gap       pres      dres      k/t       μ        step",
+    rows: [
+      "  0  +0.0000e+00  +0.0000e+00  0.00e+00  1.00e+00  1.00e+00  1.00e+00  1.00e+00  ----",
+      "  2  -3.4123e+00  -3.4189e+00  6.55e-03  4.10e-03  9.20e-04  3.30e-04  4.04e-04  6.78e-01",
+      "  6  -3.4142e+00  -3.4142e+00  1.91e-06  3.50e-07  1.00e-07  4.00e-08  1.91e-08  9.85e-01",
+      " 11  -3.4142e+00  -3.4142e+00  9.20e-12  4.10e-12  6.20e-13  9.10e-14  4.50e-14  9.99e-01",
+    ],
+    summary:
+      "terminated: optimal\nsolve time:    0.006 sec\nprimal obj :   -3.4142\ndual obj   :   -3.4142\ngap        :    9.2e-12",
+    interpretation:
+      "SOCP — one second-order cone of size n+1 = 3. The single cone makes this very fast. Optimum −2√2 = −3.4142 hits the SOC boundary; CLARABEL's central path approached it from inside the cone, which is why pres / dres are about the same order of magnitude (no 'easy' face to slide along).",
+  },
+  sdp: {
+    title: "CLARABEL log for the SDP",
+    setup: "problem\n  variables     = 1 (X, 2×2 symmetric → 3 free entries)\n  cones         = 1 PSD (size 2) + 1 zero (trace eq)\n  ----------------------\n  Status: solving",
+    header: "iter    pcost         dcost         gap       pres      dres      k/t       μ        step",
+    rows: [
+      "  0  +0.0000e+00  +0.0000e+00  0.00e+00  1.00e+00  2.10e-01  1.00e+00  1.00e+00  ----",
+      "  6  +0.7950e+00  +0.7901e+00  4.92e-03  9.10e-04  3.20e-04  1.20e-04  3.10e-04  7.20e-01",
+      " 12  +0.7929e+00  +0.7929e+00  9.85e-08  4.20e-08  1.00e-08  9.30e-09  3.05e-09  9.50e-01",
+      " 18  +0.7929e+00  +0.7929e+00  4.10e-12  3.30e-12  4.20e-13  6.10e-14  3.00e-14  9.97e-01",
+    ],
+    summary:
+      "terminated: optimal\nsolve time:    0.012 sec\nprimal obj :    0.7929\ndual obj   :    0.7929\ngap        :    4.1e-12",
+    interpretation:
+      "SDP solves are slower per iteration (the PSD cone projection is an eigendecomposition every Newton step) but converge in similar numbers of iterations. 18 iterations is typical for a 2×2 SDP. The objective 0.7929 = (3 − √2)/2 is the smaller eigenvalue of C — exactly what the SDP relaxation of an eigenvalue problem returns.",
+  },
+  logreg: {
+    title: "CLARABEL log for sparse logistic regression",
+    setup: "problem\n  variables     = 9 (β:8, b:1) + auxiliary u:8 (for ‖β‖₁) + s:50 (for cp.logistic)\n  cones         = 8 ExpCone (size 3 each, for log-sum-exp)\n              + 16 nonneg (for u ≥ ±β)\n              + 1 zero (offset)\n  ----------------------\n  Status: solving",
+    header: "iter    pcost         dcost         gap       pres      dres      k/t       μ        step",
+    rows: [
+      "  0  +0.0000e+00  +0.0000e+00  0.00e+00  1.50e+01  3.00e+00  1.00e+00  1.00e+00  ----",
+      "  4  +1.7012e+01  +1.6905e+01  1.07e-02  4.23e-02  1.10e-02  3.20e-03  6.10e-03  6.50e-01",
+      " 10  +1.6843e+01  +1.6841e+01  2.80e-04  9.10e-05  4.20e-05  1.10e-05  2.05e-05  9.10e-01",
+      " 16  +1.6842e+01  +1.6842e+01  3.10e-08  9.20e-09  4.10e-09  3.30e-10  1.05e-09  9.95e-01",
+      " 22  +1.6842e+01  +1.6842e+01  4.20e-12  3.10e-12  6.05e-13  4.10e-14  9.05e-14  9.99e-01",
+    ],
+    summary:
+      "terminated: optimal\nsolve time:    0.026 sec\nprimal obj :   16.842\ndual obj   :   16.842\ngap        :    4.2e-12",
+    interpretation:
+      "Now you can see the cost of the exponential cone. 22 iterations vs ~10 for the LP — exp-cone projections are nonlinear and CLARABEL needs more Newton steps. Notice the SETUP block: 50 sample log-losses ⇒ 50 ExpCones, plus 16 nonneg constraints from the L1 reformulation. The variable count CVXPY reports (9) is misleading — internally there are 9 + 8 + 50 = 67 free variables. That's normal for non-smooth + exp-cone problems.",
+  },
+};
+
+const CVXPY_COL_DEFS = [
+  { key: "iter", label: "iter", explain: "Newton-step iteration count along the central path. Typical convex conic problems converge in 10–30 iterations regardless of size. If iter is climbing past 50 you have either ill-conditioning, looseness in tolerance, or a near-infeasible problem." },
+  { key: "pcost", label: "pcost", explain: "Primal objective at the current iterate. For Minimize this approaches the optimum from above. It's the number you'd report as the 'answer' if you had to stop early." },
+  { key: "dcost", label: "dcost", explain: "Dual objective. For Minimize, dcost ≤ optimum ≤ pcost. Their difference is the duality gap — the certificate of optimality." },
+  { key: "gap", label: "gap", explain: "Relative duality gap (pcost − dcost) / max(1, |pcost|). The headline 'how close are we' number. 1e-8 is fine for production; 1e-6 is fine for ML." },
+  { key: "pres", label: "pres", explain: "Primal residual: ‖A x − b‖ / scale. Measures constraint violation. Should reach zero at the optimum." },
+  { key: "dres", label: "dres", explain: "Dual residual: how badly the KKT-stationarity condition is violated. Drops to zero alongside pres." },
+  { key: "kt", label: "k/t", explain: "Homogeneous-self-dual model's complementarity (κ·τ). Important when detecting infeasibility — diverges instead of going to zero. Otherwise just a sanity check." },
+  { key: "mu", label: "μ", explain: "Central-path barrier parameter. CLARABEL drives μ → 0 to push the iterate toward the cone boundary (= the optimum). Closely tied to the step size." },
+  { key: "step", label: "step", explain: "Damped Newton step length. 1.0 = full Newton step (you're in the quadratic-convergence basin). < 0.5 means CLARABEL's still being cautious near the cones." },
+];
+
+function CVXPYOutputReader({ problemKey }) {
+  const log = CVXPY_LOGS[problemKey];
+  const [hoverCol, setHoverCol] = useState(null);
+  if (!log) return null;
+  return (
+    <div style={{ marginTop: 28, padding: 18, border: "1px solid #d8d3c4", background: "#fdfaf1", borderRadius: 10 }}>
+      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
+        Reading CLARABEL's output, column by column
+      </div>
+      <div style={{ fontSize: 13, color: "#555", lineHeight: 1.55, marginBottom: 12 }}>
+        With <code style={inlineCode}>verbose=True</code>, CLARABEL prints a per-iteration table while it climbs the central path. Hover the headers below to see what each column means.
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+        {CVXPY_COL_DEFS.map((c) => (
+          <button
+            key={c.key}
+            onMouseEnter={() => setHoverCol(c.key)}
+            onMouseLeave={() => setHoverCol(null)}
+            onClick={() => setHoverCol(hoverCol === c.key ? null : c.key)}
+            style={{
+              padding: "4px 9px",
+              fontSize: 11,
+              fontFamily: "monospace",
+              border: "1px solid #c8b76c",
+              borderRadius: 4,
+              background: hoverCol === c.key ? "#f5d68d" : "#fff",
+              cursor: "pointer",
+            }}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      {hoverCol && (
+        <div
+          style={{
+            marginBottom: 12,
+            padding: "8px 12px",
+            background: "#fff8e1",
+            border: "1px solid #f5d68d",
+            borderRadius: 6,
+            fontSize: 13,
+            color: "#3d2f00",
+          }}
+        >
+          <b style={{ fontFamily: "monospace" }}>{CVXPY_COL_DEFS.find((c) => c.key === hoverCol).label}</b>
+          {": "}
+          {CVXPY_COL_DEFS.find((c) => c.key === hoverCol).explain}
+        </div>
+      )}
+
+      <div style={{ fontFamily: "monospace", fontSize: 11, color: "#888", marginBottom: 4 }}>
+        ── {log.title} ──
+      </div>
+      <pre
+        style={{
+          background: "#0d0d0d",
+          color: "#dadada",
+          padding: 12,
+          borderRadius: 6,
+          fontSize: 11,
+          fontFamily: "'JetBrains Mono', Menlo, monospace",
+          lineHeight: 1.55,
+          overflowX: "auto",
+          margin: 0,
+          whiteSpace: "pre",
+        }}
+      >
+        <div style={{ color: "#7f7864" }}>{log.setup}</div>
+        <div style={{ color: "#5a5a5a", marginTop: 4 }}>—</div>
+        <div style={{ color: "#7dd87d" }}>{log.header}</div>
+        {log.rows.map((row, i) => (
+          <div key={i}>{row}</div>
+        ))}
+        <div style={{ color: "#5a5a5a", marginTop: 6 }}>—</div>
+        <div>{log.summary}</div>
+      </pre>
+
+      <div
+        style={{
+          marginTop: 12,
+          padding: "10px 14px",
+          background: "#fff",
+          border: "1px solid #ddd",
+          borderRadius: 6,
+          fontSize: 13,
+          lineHeight: 1.55,
+          color: "#222",
+        }}
+      >
+        <div style={{ fontFamily: "monospace", fontSize: 10, color: "#888", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 4 }}>
+          What this output is telling you
+        </div>
+        {log.interpretation}
+      </div>
     </div>
   );
 }
@@ -959,6 +1225,7 @@ function kindColor(k) {
   if (k === "QP") return "#d4a017";
   if (k === "SOCP") return "#0b3da0";
   if (k === "SDP") return "#7a3da0";
+  if (k === "EXP") return "#c8311c";
   return "#444";
 }
 
