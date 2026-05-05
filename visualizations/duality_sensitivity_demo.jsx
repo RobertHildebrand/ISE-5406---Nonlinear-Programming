@@ -290,14 +290,18 @@ export default function DualitySensitivityDemo() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "minmax(440px, 1fr) minmax(420px, 1fr)",
+          gridTemplateColumns: "minmax(440px, 1fr) minmax(440px, 1fr)",
           gap: 22,
           alignItems: "flex-start",
         }}
       >
         <FeasibleRegion sol={sol} b={b} />
-        <DualityPanel sol={sol} b={b} />
+        <DualRegion sol={sol} b={b} />
       </div>
+
+      <DualityPanel sol={sol} b={b} />
+
+      <ObjectiveVsRHS sol={sol} b={b} />
 
       <SensitivityRanges sol={sol} b={b} />
       <CodePanel />
@@ -563,6 +567,367 @@ function DualityPanel({ sol, b }) {
       </div>
     </div>
   );
+}
+
+// ============================================================
+// Dual feasible region plot
+//   min  b1 π1 + b2 π2
+//   s.t. 2 π1 + π2 ≥ c1=3,  π1 + 3 π2 ≥ c2=5,  π1, π2 ≥ 0
+// ============================================================
+function DualRegion({ sol, b }) {
+  const W = 480, H = 480;
+  const padL = 50, padR = 16, padT = 18, padB = 30;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+  const piMax = 5;
+  const xmin = -0.4, xmax = piMax + 0.2;
+  const ymin = -0.4, ymax = piMax + 0.2;
+  const xs = (x) => padL + ((x - xmin) / (xmax - xmin)) * chartW;
+  const ys = (y) => padT + (1 - (y - ymin) / (ymax - ymin)) * chartH;
+
+  // Dual constraints (≥): coefficients are columns of A; RHS is c.
+  // Constraint k: A[0][k] π1 + A[1][k] π2 ≥ C[k]
+  const dualLines = [
+    [A[0][0], A[1][0], C[0]], // from x ≥ 0 → 2 π1 + π2 ≥ 3
+    [A[0][1], A[1][1], C[1]], // from y ≥ 0 → π1 + 3 π2 ≥ 5
+  ];
+
+  // Compute dual-feasible polygon vertices inside [0, piMax]^2
+  const vertices = useMemo(() => {
+    const lines = [
+      [dualLines[0][0], dualLines[0][1], dualLines[0][2]],
+      [dualLines[1][0], dualLines[1][1], dualLines[1][2]],
+      [1, 0, 0],            // π1 = 0
+      [0, 1, 0],            // π2 = 0
+      [1, 0, piMax],        // π1 = piMax
+      [0, 1, piMax],        // π2 = piMax
+    ];
+    const pts = [];
+    for (let i = 0; i < lines.length; i++) {
+      for (let j = i + 1; j < lines.length; j++) {
+        const [a1, b1, c1] = lines[i];
+        const [a2, b2, c2] = lines[j];
+        const det = a1 * b2 - a2 * b1;
+        if (Math.abs(det) < 1e-9) continue;
+        const x = (c1 * b2 - c2 * b1) / det;
+        const y = (a1 * c2 - a2 * c1) / det;
+        const eps = 1e-7;
+        // Must satisfy: dual constraints (≥), nonneg, ≤ piMax
+        if (
+          x >= -eps && y >= -eps &&
+          x <= piMax + eps && y <= piMax + eps &&
+          dualLines[0][0] * x + dualLines[0][1] * y >= dualLines[0][2] - eps &&
+          dualLines[1][0] * x + dualLines[1][1] * y >= dualLines[1][2] - eps
+        ) {
+          pts.push({ x: Math.max(0, x), y: Math.max(0, y) });
+        }
+      }
+    }
+    return pts;
+  }, []);
+
+  // Sort by polar angle
+  let polyPts = [];
+  if (vertices.length >= 3) {
+    const cx = vertices.reduce((s, v) => s + v.x, 0) / vertices.length;
+    const cy = vertices.reduce((s, v) => s + v.y, 0) / vertices.length;
+    polyPts = [...vertices].sort(
+      (a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx)
+    );
+  }
+
+  // Dual objective level lines through optimum and lower
+  const dualObjLines = [];
+  if (sol.feasible) {
+    const dualOpt = b[0] * sol.pi[0] + b[1] * sol.pi[1];
+    for (const dz of [-3, -2, -1, 0, 1]) {
+      const z = dualOpt + dz * Math.max(2, dualOpt * 0.25);
+      // b1·π1 + b2·π2 = z, parameterize over π1
+      let x1, y1, x2, y2;
+      if (Math.abs(b[1]) > 1e-6) {
+        x1 = xmin; y1 = (z - b[0] * x1) / b[1];
+        x2 = xmax; y2 = (z - b[0] * x2) / b[1];
+      } else if (Math.abs(b[0]) > 1e-6) {
+        x1 = z / b[0]; y1 = ymin;
+        x2 = z / b[0]; y2 = ymax;
+      } else {
+        continue;
+      }
+      dualObjLines.push({ x1, y1, x2, y2, optimal: dz === 0 });
+    }
+  }
+
+  return (
+    <div style={panel}>
+      <div style={{ fontFamily: "monospace", fontSize: 10, color: "#888", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 6 }}>
+        Dual feasible region — min b<sub>1</sub>π<sub>1</sub> + b<sub>2</sub>π<sub>2</sub>
+      </div>
+      <svg width={W} height={H}>
+        {/* axes */}
+        <line x1={padL} y1={ys(0)} x2={padL + chartW} y2={ys(0)} stroke="#888" />
+        <line x1={xs(0)} y1={padT} x2={xs(0)} y2={padT + chartH} stroke="#888" />
+
+        {/* grid */}
+        {[1, 2, 3, 4, 5].map((v) => (
+          <React.Fragment key={v}>
+            <line x1={xs(v)} y1={padT} x2={xs(v)} y2={padT + chartH} stroke="#eee" strokeDasharray="2,3" />
+            <line x1={padL} y1={ys(v)} x2={padL + chartW} y2={ys(v)} stroke="#eee" strokeDasharray="2,3" />
+          </React.Fragment>
+        ))}
+
+        {/* feasible region (capped at piMax) */}
+        {polyPts.length >= 3 && (
+          <polygon
+            points={polyPts.map((p) => `${xs(p.x)},${ys(p.y)}`).join(" ")}
+            fill="rgba(122, 61, 160, 0.10)"
+            stroke="#7a3da0"
+            strokeWidth={1.5}
+          />
+        )}
+
+        {/* dual constraint lines (rotated colors: x-constraint blue, y-constraint purple → match primal vars) */}
+        <DualConstraintLine
+          a={dualLines[0][0]} bb={dualLines[0][1]} c={dualLines[0][2]}
+          xs={xs} ys={ys} xmin={xmin} xmax={xmax}
+          color="#0b3da0"
+          active={sol.feasible && Math.abs(sol.rc[0]) < 1e-6 && !sol.activeMask.every(() => false) && (sol.x > 1e-7)}
+          label="2π₁ + π₂ = 3"
+        />
+        <DualConstraintLine
+          a={dualLines[1][0]} bb={dualLines[1][1]} c={dualLines[1][2]}
+          xs={xs} ys={ys} xmin={xmin} xmax={xmax}
+          color="#7a3da0"
+          active={sol.feasible && Math.abs(sol.rc[1]) < 1e-6 && (sol.y > 1e-7)}
+          label="π₁ + 3π₂ = 5"
+        />
+
+        {/* dual obj level lines */}
+        {dualObjLines.map((l, i) => (
+          <line
+            key={i}
+            x1={xs(l.x1)} y1={ys(l.y1)} x2={xs(l.x2)} y2={ys(l.y2)}
+            stroke={l.optimal ? "#c8311c" : "#e5d8b8"}
+            strokeWidth={l.optimal ? 2 : 1}
+            strokeDasharray={l.optimal ? "" : "3,3"}
+          />
+        ))}
+
+        {/* vertices */}
+        {vertices.map((v, i) => (
+          <circle
+            key={i}
+            cx={xs(v.x)} cy={ys(v.y)}
+            r={4} fill="#fff" stroke="#7a3da0" strokeWidth={1.5}
+          />
+        ))}
+
+        {/* dual optimum */}
+        {sol.feasible && (
+          <>
+            <circle cx={xs(sol.pi[0])} cy={ys(sol.pi[1])} r={8} fill="#c8311c" stroke="#fff" strokeWidth={2.5} />
+            <text x={xs(sol.pi[0]) + 12} y={ys(sol.pi[1]) - 6} fontSize={12} fontFamily="monospace" fill="#c8311c" fontWeight={700}>
+              π* = ({sol.pi[0].toFixed(2)}, {sol.pi[1].toFixed(2)})
+            </text>
+            <text x={xs(sol.pi[0]) + 12} y={ys(sol.pi[1]) + 10} fontSize={11} fontFamily="monospace" fill="#c8311c">
+              bᵀπ = {(b[0] * sol.pi[0] + b[1] * sol.pi[1]).toFixed(2)}
+            </text>
+          </>
+        )}
+
+        {/* axis ticks */}
+        {[0, 1, 2, 3, 4, 5].map((v) => (
+          <text key={`xl${v}`} x={xs(v)} y={padT + chartH + 14} textAnchor="middle" fontSize={10} fontFamily="monospace" fill="#666">
+            {v}
+          </text>
+        ))}
+        {[0, 1, 2, 3, 4, 5].map((v) => (
+          <text key={`yl${v}`} x={padL - 6} y={ys(v) + 3} textAnchor="end" fontSize={10} fontFamily="monospace" fill="#666">
+            {v}
+          </text>
+        ))}
+        <text x={padL + chartW - 8} y={ys(0) - 6} textAnchor="end" fontSize={11} fontFamily="monospace" fill="#666">
+          π₁
+        </text>
+        <text x={xs(0) + 8} y={padT + 12} fontSize={11} fontFamily="monospace" fill="#666">
+          π₂
+        </text>
+      </svg>
+      <div style={{ fontSize: 12, color: "#555", marginTop: 4, lineHeight: 1.45 }}>
+        Dual is a <i>minimization</i> over <Tex>{`(\\pi_1, \\pi_2) \\ge 0`}</Tex> — feasible region lies <i>above</i> the
+        dual constraint lines (each primal variable contributes a dual constraint).
+        Sliding <Tex>{`b_1, b_2`}</Tex> changes the dual <i>objective</i> (cost vector); the feasible region itself
+        is fixed because it's set by the primal cost <Tex>{`c`}</Tex>.
+      </div>
+    </div>
+  );
+}
+
+function DualConstraintLine({ a, bb, c, xs, ys, xmin, xmax, color, active, label }) {
+  if (Math.abs(bb) > 1e-9) {
+    const x1 = xmin, y1 = (c - a * x1) / bb;
+    const x2 = xmax, y2 = (c - a * x2) / bb;
+    return (
+      <line x1={xs(x1)} y1={ys(y1)} x2={xs(x2)} y2={ys(y2)} stroke={color} strokeWidth={active ? 3 : 1.6} />
+    );
+  }
+  return null;
+}
+
+// ============================================================
+// Objective z* vs RHS chart — sweep each b_i, plot z*(b_i)
+// ============================================================
+function ObjectiveVsRHS({ sol, b }) {
+  if (!sol.feasible) return null;
+  return (
+    <div style={{ ...panel, marginTop: 18 }}>
+      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>
+        Optimal objective <Tex>{`z^\\star`}</Tex> as a function of each RHS
+      </div>
+      <div style={{ fontSize: 13, color: "#444", marginBottom: 10, lineHeight: 1.5 }}>
+        Sweep one <Tex>{`b_i`}</Tex> while holding the other fixed at its
+        current slider value. Inside the sensitivity range, the curve is a
+        straight line with slope <Tex>{`\\pi_i`}</Tex> (the shadow price);
+        outside, the basis changes and the slope drops or jumps.
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 22 }}>
+        <ZvsBChart whichB={0} b={b} sol={sol} />
+        <ZvsBChart whichB={1} b={b} sol={sol} />
+      </div>
+    </div>
+  );
+}
+
+function ZvsBChart({ whichB, b, sol }) {
+  const W = 460, H = 280;
+  const padL = 50, padR = 16, padT = 18, padB = 36;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+  const bMax = 22;
+
+  // Sample b_i ∈ [0, bMax]
+  const samples = useMemo(() => {
+    const N = 240;
+    const arr = [];
+    for (let k = 0; k <= N; k++) {
+      const v = (k / N) * bMax;
+      const bb = [...b];
+      bb[whichB] = v;
+      const r = solveLP(bb);
+      arr.push({ bi: v, z: r.feasible ? r.obj : null });
+    }
+    return arr;
+  }, [whichB, b[1 - whichB]]);
+
+  const zMax = Math.max(
+    ...samples.map((s) => (s.z ?? 0)),
+    sol.obj,
+    1
+  );
+  const xs = (v) => padL + (v / bMax) * chartW;
+  const ys = (z) => padT + (1 - z / (zMax * 1.15)) * chartH;
+
+  // Sensitivity range bar for current b_i
+  const [lo, hi] = sol.sa[whichB];
+  const bMin = lo === -Infinity ? 0 : Math.max(0, lo);
+  const bHi = hi === Infinity ? bMax : Math.min(bMax, hi);
+
+  // Build path
+  let path = "";
+  for (let k = 0; k < samples.length; k++) {
+    const s = samples[k];
+    if (s.z === null) continue;
+    path += (path === "" ? "M" : "L") + xs(s.bi) + "," + ys(s.z) + " ";
+  }
+
+  const colors = ["#0b3da0", "#7a3da0"];
+  const labels = ["b₁ (wood)", "b₂ (labor)"];
+  const piVal = sol.pi[whichB];
+
+  return (
+    <div>
+      <div style={{ fontFamily: "monospace", fontSize: 12, marginBottom: 4 }}>
+        <span style={{ color: colors[whichB] }}>{labels[whichB]}</span> &nbsp;
+        slope at current point: <Tex>{`\\pi_${whichB + 1} = ${piVal.toFixed(3)}`}</Tex>
+      </div>
+      <svg width={W} height={H}>
+        {/* axes */}
+        <line x1={padL} y1={padT + chartH} x2={padL + chartW} y2={padT + chartH} stroke="#888" />
+        <line x1={padL} y1={padT} x2={padL} y2={padT + chartH} stroke="#888" />
+
+        {/* sensitivity range band */}
+        <rect
+          x={xs(bMin)}
+          y={padT}
+          width={Math.max(2, xs(bHi) - xs(bMin))}
+          height={chartH}
+          fill={colors[whichB] + "18"}
+        />
+
+        {/* z* curve */}
+        <path d={path} stroke={colors[whichB]} strokeWidth={2} fill="none" />
+
+        {/* current point */}
+        <line
+          x1={xs(b[whichB])} y1={padT}
+          x2={xs(b[whichB])} y2={padT + chartH}
+          stroke="#c8311c" strokeDasharray="3,3" strokeWidth={1}
+        />
+        <circle cx={xs(b[whichB])} cy={ys(sol.obj)} r={6} fill="#c8311c" stroke="#fff" strokeWidth={2} />
+        <text x={xs(b[whichB]) + 8} y={ys(sol.obj) - 8} fontSize={11} fontFamily="monospace" fill="#c8311c" fontWeight={700}>
+          ({b[whichB].toFixed(1)}, {sol.obj.toFixed(2)})
+        </text>
+
+        {/* range bracket on x-axis */}
+        <line x1={xs(bMin)} y1={padT + chartH + 4} x2={xs(bHi)} y2={padT + chartH + 4} stroke={colors[whichB]} strokeWidth={3} />
+        <text x={(xs(bMin) + xs(bHi)) / 2} y={padT + chartH + 18} fontSize={10} textAnchor="middle" fontFamily="monospace" fill={colors[whichB]}>
+          range [{lo === -Infinity ? "−∞" : lo.toFixed(1)}, {hi === Infinity ? "+∞" : hi.toFixed(1)}]
+        </text>
+
+        {/* x ticks */}
+        {[0, 5, 10, 15, 20].map((v) => (
+          <g key={v}>
+            <line x1={xs(v)} y1={padT + chartH} x2={xs(v)} y2={padT + chartH + 3} stroke="#666" />
+            <text x={xs(v)} y={padT + chartH + 32} fontSize={10} textAnchor="middle" fontFamily="monospace" fill="#666">
+              {v}
+            </text>
+          </g>
+        ))}
+        {/* y ticks */}
+        {(() => {
+          const stepY = niceStep(zMax * 1.15 / 4);
+          const ticks = [];
+          for (let v = 0; v <= zMax * 1.15; v += stepY) ticks.push(v);
+          return ticks.map((v) => (
+            <g key={v}>
+              <line x1={padL - 3} y1={ys(v)} x2={padL} y2={ys(v)} stroke="#666" />
+              <text x={padL - 6} y={ys(v) + 3} fontSize={10} textAnchor="end" fontFamily="monospace" fill="#666">
+                {v.toFixed(0)}
+              </text>
+            </g>
+          ));
+        })()}
+
+        {/* axis labels */}
+        <text x={padL + chartW} y={padT + chartH + 14} fontSize={11} fontFamily="monospace" fill="#666" textAnchor="end">
+          b<tspan baselineShift="sub" fontSize="9">{whichB + 1}</tspan>
+        </text>
+        <text x={padL + 4} y={padT + 12} fontSize={11} fontFamily="monospace" fill="#666">
+          z*
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+function niceStep(v) {
+  const exp = Math.floor(Math.log10(v));
+  const f = v / Math.pow(10, exp);
+  let nf;
+  if (f < 1.5) nf = 1;
+  else if (f < 3) nf = 2;
+  else if (f < 7) nf = 5;
+  else nf = 10;
+  return nf * Math.pow(10, exp);
 }
 
 // ============================================================

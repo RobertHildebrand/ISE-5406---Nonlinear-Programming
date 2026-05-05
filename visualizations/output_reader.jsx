@@ -22,9 +22,10 @@ import { Play, Pause, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react"
 
 export function OutputReader({ title, intro, columns, logs, problemKey }) {
   const log = logs[problemKey];
-  const [step, setStep] = useState(0); // 0 = none, 1..N = column N-1 highlighted
+  const extras = log?.extras || [];
+  const [step, setStep] = useState(0); // 0 = none, 1..N column, N+1..N+M extra
   const [playing, setPlaying] = useState(false);
-  const totalSteps = columns.length;
+  const totalSteps = columns.length + extras.length;
 
   // Reset when problem changes
   useEffect(() => {
@@ -48,7 +49,10 @@ export function OutputReader({ title, intro, columns, logs, problemKey }) {
   }, [playing, totalSteps]);
 
   if (!log) return null;
-  const activeCol = step === 0 ? null : columns[step - 1];
+  const onColStep = step >= 1 && step <= columns.length;
+  const onExtraStep = step > columns.length;
+  const activeCol = onColStep ? columns[step - 1] : null;
+  const activeExtra = onExtraStep ? extras[step - columns.length - 1] : null;
   const interpretation = activeCol
     ? log.perCol?.[activeCol.key] || activeCol.def
     : null;
@@ -136,6 +140,99 @@ export function OutputReader({ title, intro, columns, logs, problemKey }) {
           );
         })}
       </div>
+
+      {/* Extras grid — output sections + power-user knobs */}
+      {extras.length > 0 && (
+        <>
+          <div
+            style={{
+              fontFamily: "monospace",
+              fontSize: 10,
+              color: "#888",
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              marginBottom: 6,
+              marginTop: 4,
+            }}
+          >
+            Other parts of the output · advanced features
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+              gap: 8,
+              marginBottom: 14,
+            }}
+          >
+            {extras.map((ex, i) => {
+              const idx = columns.length + i + 1;
+              const isActive = activeExtra?.key === ex.key;
+              const isAdvanced = ex.kind === "feature";
+              return (
+                <button
+                  key={ex.key}
+                  onClick={() => setStep(idx)}
+                  style={{
+                    textAlign: "left",
+                    padding: "8px 10px",
+                    background: isActive
+                      ? "#fff4c8"
+                      : isAdvanced
+                      ? "#f3edf7"
+                      : "#f4f6ee",
+                    border: isActive
+                      ? "2px solid #f5a524"
+                      : isAdvanced
+                      ? "1px solid #c4b8d0"
+                      : "1px solid #c0cfa0",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: isActive
+                        ? "#7d5a00"
+                        : isAdvanced
+                        ? "#6e4c8a"
+                        : "#4a6a2a",
+                      fontFamily: "monospace",
+                      letterSpacing: "0.1em",
+                    }}
+                  >
+                    {isAdvanced ? "ADVANCED" : "OUTPUT"} ·{" "}
+                    {String(idx).padStart(2, "0")}
+                  </div>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 13,
+                      color: isActive ? "#3d2f00" : "#222",
+                      marginTop: 1,
+                    }}
+                  >
+                    {ex.label}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#555",
+                      marginTop: 4,
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    {ex.summary}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {/* Stepper controls */}
       <div
@@ -304,7 +401,7 @@ export function OutputReader({ title, intro, columns, logs, problemKey }) {
       )}
 
       {/* Active column interpretation */}
-      {activeCol ? (
+      {activeCol && (
         <div
           style={{
             marginTop: 14,
@@ -330,7 +427,69 @@ export function OutputReader({ title, intro, columns, logs, problemKey }) {
             {interpretation}
           </div>
         </div>
-      ) : (
+      )}
+
+      {/* Active extra interpretation (output section OR advanced feature) */}
+      {activeExtra && (
+        <div
+          style={{
+            marginTop: 14,
+            padding: "12px 16px",
+            background:
+              activeExtra.kind === "feature" ? "#f3edf7" : "#fff4c8",
+            border:
+              activeExtra.kind === "feature"
+                ? "2px solid #6e4c8a"
+                : "2px solid #f5a524",
+            borderRadius: 8,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "monospace",
+              fontSize: 11,
+              color:
+                activeExtra.kind === "feature" ? "#5a3a78" : "#7d5a00",
+              marginBottom: 6,
+              textTransform: "uppercase",
+              letterSpacing: "0.12em",
+            }}
+          >
+            {activeExtra.kind === "feature" ? "Power-user feature" : "Output section"}{" "}
+            · {activeExtra.label}
+          </div>
+          {activeExtra.excerpt && (
+            <pre
+              style={{
+                background: "#0d0d0d",
+                color: "#dadada",
+                padding: "10px 14px",
+                borderRadius: 6,
+                fontSize: 11,
+                fontFamily: "'JetBrains Mono', Menlo, monospace",
+                lineHeight: 1.55,
+                margin: "0 0 10px 0",
+                whiteSpace: "pre",
+                overflowX: "auto",
+              }}
+            >
+              {activeExtra.excerpt}
+            </pre>
+          )}
+          <div
+            style={{
+              fontSize: 14,
+              color:
+                activeExtra.kind === "feature" ? "#2d1f3d" : "#3d2f00",
+              lineHeight: 1.6,
+            }}
+          >
+            {activeExtra.explain}
+          </div>
+        </div>
+      )}
+
+      {!activeCol && !activeExtra && (
         <div
           style={{
             marginTop: 14,
@@ -343,8 +502,8 @@ export function OutputReader({ title, intro, columns, logs, problemKey }) {
             textAlign: "center",
           }}
         >
-          Press <b>Next</b> (or click any definition card above) to start
-          stepping through the columns →
+          Press <b>Next</b> (or click any card above) to step through every
+          column AND the other parts of the output →
         </div>
       )}
 

@@ -36,6 +36,10 @@ import PyTorchTutorial from '../pytorch_tutorial.jsx';
 import MLCompare from '../ml_compare.jsx';
 import NLPApplications from '../nlp_applications.jsx';
 import ISEApplications from '../ise_applications.jsx';
+import AmplpyTutorial from '../amplpy_tutorial.jsx';
+import TableauPivoterDemo from '../tableau_pivoter_demo.jsx';
+import DualConstructionDemo from '../dual_construction_demo.jsx';
+import SensitivityWalkthroughDemo from '../sensitivity_walkthrough_demo.jsx';
 
 // ---------- Categories (display order) ----------
 const CATEGORIES = [
@@ -228,8 +232,32 @@ const DEMOS = [
     category: 'advanced',
     title: 'Interactive Simplex Tableau',
     description:
-      "Click-to-pivot tableau with practice mode. Click a column to enter, see the ratio test, click a row to pivot. Feasible-region plot tracks the current vertex. Sensitivity + duality panel appears when optimal.",
+      "Click-to-pivot tableau with practice mode. Click a column to enter, see the ratio test, click a row to pivot. Feasible-region plot tracks the current vertex. Each pivot now also writes out the elementary row operations in algebraic form.",
     Component: SimplexTableauDemo,
+  },
+  {
+    id: 'tableau-pivoter',
+    category: 'advanced',
+    title: 'Tableau Pivoter — Step-by-Step Row Ops',
+    description:
+      "Type your own LP, pick any pivot row and column, watch the elementary row operations play out one at a time with the algebra written underneath. The Gauss-Jordan mechanics behind every simplex iteration, exposed.",
+    Component: TableauPivoterDemo,
+  },
+  {
+    id: 'dual-construction',
+    category: 'advanced',
+    title: 'Primal → Dual Construction',
+    description:
+      "Build the dual of a general LP one stage at a time: transpose A, swap b ↔ c, flip objective sense, then apply per-constraint and per-variable sign rules. Toggle constraint types (≤ / = / ≥) and variable signs to see the dual reshape live.",
+    Component: DualConstructionDemo,
+  },
+  {
+    id: 'sensitivity-walkthrough',
+    category: 'advanced',
+    title: 'Sensitivity Analysis — Step-by-Step Derivation',
+    description:
+      "Derive allowable ranges for c_j (basic & non-basic separately) and b_i from the optimal tableau. Each ratio test is written out in algebra; the binding bounds are highlighted. Mini-simplex runs internally on any LP you type.",
+    Component: SensitivityWalkthroughDemo,
   },
   {
     id: 'duality-sensitivity',
@@ -328,6 +356,14 @@ const DEMOS = [
     description:
       'Build three NLPs (constrained QP, disk-projection, Markowitz portfolio) line-by-line in Pyomo and watch IPOPT solve them. Includes install instructions.',
     Component: PyomoTutorial,
+  },
+  {
+    id: 'amplpy-tutorial',
+    category: 'tutorials',
+    title: 'AMPL + amplpy — Code Stepper',
+    description:
+      'Mirror of the Pyomo + IPOPT walkthrough using amplpy. Three problems (QP, Markowitz portfolio, HS71). Toggle the .mod view to see the equivalent pure-AMPL syntax. Includes a Pyomo translation cheat sheet.',
+    Component: AmplpyTutorial,
   },
   {
     id: 'cvxpy-tutorial',

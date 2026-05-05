@@ -607,8 +607,97 @@ const SCIP_LEGEND = (
   </>
 );
 
+// ── SCIP extras: output sections + power-user features ──
+const SCIP_OUTPUT_EXTRAS = [
+  {
+    key: "presolving",
+    kind: "output",
+    label: "Presolving block",
+    summary: "Before the table starts",
+    excerpt: "presolving:\n(round 1, fast)       0 del vars, 0 del conss, 0 add conss, 1 chg bounds, ...\n(round 2, medium)     2 del vars, 1 del conss, 0 add conss, 0 chg bounds, ...\nPresolving Time: 0.00",
+    explain: "Before the iteration table, SCIP runs presolving in rounds (fast → medium → exhaustive). Each round prints how many variables it deleted, constraints it strengthened, bounds it changed, etc. Aggressive presolve is one of SCIP's strengths — turn it off via setPresolve('off') for benchmarking against the raw model.",
+  },
+  {
+    key: "scip_status_block",
+    kind: "output",
+    label: "SCIP Status block",
+    summary: "End-of-solve summary",
+    excerpt: "SCIP Status        : problem is solved [optimal solution found]\nSolving Time (sec) : 0.41\nSolving Nodes      : 137\nPrimal Bound       : +1.22780000000000e+00 (3 solutions)\nDual Bound         : +1.22780000000000e+00\nGap                : 0.00 %",
+    explain: "Single canonical block at the end. The status string can also be 'time limit reached', 'gap limit reached', 'memory limit reached', 'infeasible', 'unbounded', or 'inforunbd'. (3 solutions) on Primal Bound is the SOLUTION COUNT — how many distinct incumbents the solve found. Always check this block, never trust m.getStatus() alone.",
+  },
+  {
+    key: "primal_heur_log",
+    kind: "output",
+    label: "Heuristics in the table",
+    summary: "What 'p' / '*' rows mean",
+    excerpt: "p  0.0s |  1 |  0 |  0 |  - | trivial |  ...  | 1.800e+02 | Inf | unknown\n*  0.0s |  3 |  2 | 11 | 3.5 |  639k   |  ...  | 4.000e+01 | 11.1% | unknown",
+    explain: "SCIP prefixes special rows: 'p' = primal heuristic during presolve (trivial, locks, shifting, RENS, feaspump, oneopt, RINS, undercover, ...), '*' = a new incumbent found at a B&B node (LP rounding, branching solution, propagation). The mem/heur column tells you WHICH heuristic produced the row. Useful when chasing 'why did this incumbent show up so late?'",
+  },
+  {
+    key: "stats",
+    kind: "output",
+    label: "writeStatistics() dump",
+    summary: "Full per-plugin breakdown",
+    excerpt: "m.writeStatistics('stats.txt')\n# Or stream to stdout:\nm.printStatistics()\n\n# Output (excerpt):\n#   Constraint Timings:\n#     linear: 0.01s, 12 calls\n#     nonlinear: 0.32s, 89 calls\n#   Separators:\n#     gomory: 0.04s, 6 cuts\n#     mir: 0.02s, 3 cuts",
+    explain: "After the solve, m.printStatistics() (or writeStatistics) dumps a multi-page report: per-plugin timings, cut counts, presolver activity, branching decisions, propagator efficiency. Indispensable for diagnosing slow MINLP solves — tells you exactly where SCIP is spending time.",
+  },
+];
+
+const SCIP_FEATURES = [
+  {
+    key: "params",
+    kind: "feature",
+    label: "Parameter limits",
+    summary: "Time, gap, nodes",
+    excerpt: "m.setParam('limits/time', 60)        # seconds\nm.setParam('limits/gap', 0.01)       # 1% MIP gap\nm.setParam('limits/nodes', 10000)\nm.setParam('limits/solutions', 5)    # stop at 5th feasible\n\n# Disable output\nm.hideOutput()\n# m.showOutput()  # turn back on",
+    explain: "SCIP stops at the FIRST limit hit and returns the best solution so far. Use limits/gap for production code (1% is plenty for most decisions); limits/time as a safety net; limits/solutions for 'find me 5 alternatives'. hideOutput() suppresses the iteration log.",
+  },
+  {
+    key: "warm_start",
+    kind: "feature",
+    label: "Warm starts via initial solution",
+    summary: "Hand SCIP a known-good answer",
+    excerpt: "sol = m.createSol()\nfor v, val in zip(m.getVars(), prior_solution):\n    m.setSolVal(sol, v, val)\nm.addSol(sol)\n# Or, for partial solutions:\nm.addSolFree(sol)  # SCIP fills the rest via heuristics\n\nm.optimize()",
+    explain: "SCIP accepts user-provided incumbent solutions before optimize(). Useful for rolling-horizon problems, parametric studies, or when a heuristic outside SCIP gives you a feasible point. Internally SCIP runs trysol() to verify feasibility, then uses it as the initial primal bound.",
+  },
+  {
+    key: "reopt",
+    kind: "feature",
+    label: "Reoptimization",
+    summary: "Re-solve with modified data, fast",
+    excerpt: "m.setParam('reoptimization/enable', True)\nm.optimize()\n\n# Modify the model (change RHS, bounds, etc.)\nm.chgRhs(some_constraint, new_rhs)\nm.freeReoptSolve()  # don't free the whole problem\nm.optimize()",
+    explain: "If you'll re-solve the same model with small modifications (parametric study, branch-cut-and-price), enable reoptimization. SCIP keeps cuts, conflict constraints, and branching decisions across solves — re-using up to 90% of work. freeReoptSolve() resets only the search state, keeping the model.",
+  },
+  {
+    key: "branching",
+    kind: "feature",
+    label: "Branching rules",
+    summary: "Pick how SCIP branches",
+    excerpt: "# Available rules:\nm.setParam('branching/rule', 'relpscost')    # default: reliability pseudocost\nm.setParam('branching/rule', 'fullstrong')   # expensive but tight\nm.setParam('branching/rule', 'inference')    # for SAT-like problems\nm.setParam('branching/rule', 'mostinf')      # most-infeasible (cheap, weak)\n\n# Per-variable hint:\nm.chgVarBranchPriority(var, 100)             # branch on this first",
+    explain: "SCIP has a half-dozen built-in branching rules. relpscost is the default and best for most MIPs. fullstrong evaluates every fractional variable's child bounds — slow but tight. Use chgVarBranchPriority to bias toward known-important variables.",
+  },
+  {
+    key: "plugins",
+    kind: "feature",
+    label: "Custom plugins",
+    summary: "Conshdlr, Sepa, Heur, Brancher, Pricer",
+    excerpt: "from pyscipopt import Conshdlr, SCIP_RESULT\n\nclass SubtourElim(Conshdlr):\n    def conscheck(self, constraints, ...):\n        # Find subtours, raise if any\n        if has_subtour(self.model):\n            return {'result': SCIP_RESULT.INFEASIBLE}\n        return {'result': SCIP_RESULT.FEASIBLE}\n\n    def consenfolp(self, ...):\n        if has_subtour(self.model):\n            self.model.addCons(subtour_elim_cut)\n            return {'result': SCIP_RESULT.SEPARATED}\n        return {'result': SCIP_RESULT.FEASIBLE}\n\nm.includeConshdlr(SubtourElim(), 'subtour_elim', 'Subtour elimination', priority=-1)",
+    explain: "SCIP is a FRAMEWORK — you can plug in your own constraint handlers (lazy constraints, callbacks), separators (custom cuts), branchers, pricers (column generation), heuristics, presolvers, propagators. PySCIPOpt exposes all of these. The hooks let you implement Benders, Dantzig-Wolfe, branch-and-price, or domain-specific cuts directly.",
+  },
+  {
+    key: "duals_scip",
+    kind: "feature",
+    label: "Duals on the fixed-LP",
+    summary: "After optimize, fix integers, re-solve",
+    excerpt: "m.optimize()\n# Fix integers to MIP solution, re-solve LP\nm.freeTransform()\nfor v in m.getVars():\n    if v.vtype() in ('B', 'I'):\n        m.fixVar(v, m.getVal(v))\nm.optimize()\n\nfor c in m.getConss():\n    print(c.name, m.getDualSolVal(c))",
+    explain: "Like Gurobi, SCIP doesn't expose meaningful duals on the original MIP. Fix all integer vars to their MIP values, re-solve as LP, and getDualSolVal returns shadow prices. For pure LPs, getDualSolVal works directly after optimize() — no fixing needed.",
+  },
+];
+
 const SCIP_LOGS = {
   knapsack: {
+    extras: [...SCIP_OUTPUT_EXTRAS, ...SCIP_FEATURES],
+
     rows: [
       { color: "#9a4caa", cells: { prefix: "p", time: "0.0s", node: "1", left: "0", lpiter: "0", lpitn: "-", memheur: "trivial", mdpt: "0", vars: "4", cons: "1", lprows: "0", cuts: "0", sepa: "0", confs: "0", strbr: "0", db: "0.000e+00", pb: "1.800e+02", gap: "Inf", compl: "unknown" } },
       { color: "#9a4caa", cells: { prefix: "p", time: "0.0s", node: "1", left: "0", lpiter: "0", lpitn: "-", memheur: "locks", mdpt: "0", vars: "4", cons: "1", lprows: "1", cuts: "0", sepa: "0", confs: "0", strbr: "0", db: "0.000e+00", pb: "2.200e+02", gap: "Inf", compl: "unknown" } },
@@ -641,6 +730,7 @@ const SCIP_LOGS = {
     },
   },
   setcover: {
+    extras: [...SCIP_OUTPUT_EXTRAS, ...SCIP_FEATURES],
     rows: [
       { color: "#9a4caa", cells: { prefix: "p", time: "0.0s", node: "1", left: "0", lpiter: "0", lpitn: "-", memheur: "trivial", mdpt: "0", vars: "5", cons: "5", lprows: "0", cuts: "0", sepa: "0", confs: "0", strbr: "0", db: "0.000e+00", pb: "1.800e+01", gap: "Inf", compl: "unknown" } },
       { color: "#9a4caa", cells: { prefix: "p", time: "0.0s", node: "1", left: "0", lpiter: "0", lpitn: "-", memheur: "shifting", mdpt: "0", vars: "5", cons: "5", lprows: "5", cuts: "0", sepa: "0", confs: "0", strbr: "0", db: "0.000e+00", pb: "9.000e+00", gap: "Inf", compl: "unknown" } },
@@ -673,6 +763,7 @@ const SCIP_LOGS = {
     },
   },
   minlp: {
+    extras: [...SCIP_OUTPUT_EXTRAS, ...SCIP_FEATURES],
     rows: [
       { cells: { prefix: "", time: "0.0s", node: "1", left: "0", lpiter: "2", lpitn: "-", memheur: "612k", mdpt: "0", vars: "2", cons: "1", lprows: "1", cuts: "0", sepa: "0", confs: "0", strbr: "0", db: "2.000e+01", pb: "4.400e+01", gap: "120.0%", compl: "unknown" } },
       { cells: { prefix: "", time: "0.0s", node: "1", left: "0", lpiter: "5", lpitn: "-", memheur: "620k", mdpt: "0", vars: "2", cons: "1", lprows: "3", cuts: "2", sepa: "1", confs: "0", strbr: "0", db: "3.200e+01", pb: "4.400e+01", gap: "37.5%", compl: "unknown" } },
@@ -706,6 +797,7 @@ const SCIP_LOGS = {
     },
   },
   bienstock: {
+    extras: [...SCIP_OUTPUT_EXTRAS, ...SCIP_FEATURES],
     rows: [
       { cells: { prefix: "", time: "0.0s", node: "1", left: "0", lpiter: "14", lpitn: "-", memheur: "712k", mdpt: "0", vars: "5", cons: "6", lprows: "6", cuts: "0", sepa: "0", confs: "0", strbr: "0", db: "1.414e+00", pb: "-inf", gap: "Inf", compl: "unknown" } },
       { cells: { prefix: "", time: "0.0s", node: "1", left: "0", lpiter: "27", lpitn: "-", memheur: "738k", mdpt: "0", vars: "5", cons: "6", lprows: "10", cuts: "8", sepa: "3", confs: "0", strbr: "0", db: "1.412e+00", pb: "-inf", gap: "Inf", compl: "unknown" } },

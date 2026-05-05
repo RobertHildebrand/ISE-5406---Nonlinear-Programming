@@ -575,8 +575,96 @@ const IPOPT_COLS = [
   { key: "ls", label: "ls", def: "Number of line-search backtracks. 1 = the first trial was accepted. >1 means IPOPT had to shrink the step before accepting." },
 ];
 
+// ── IPOPT extras: output sections + power-user features ──
+const IPOPT_OUTPUT_EXTRAS = [
+  {
+    key: "iter_count",
+    kind: "output",
+    label: '"Number of Iterations" line',
+    summary: "Total accepted iterations",
+    excerpt: "Number of Iterations....: 9",
+    explain: "Counts ACCEPTED steps only — line-search rejections don't add to this. Compare to total CPU: iters/sec is a useful per-problem benchmark. Typical NLPs converge in 10–50; > 100 may indicate scaling problems, ill-conditioned Hessian, or near-infeasibility.",
+  },
+  {
+    key: "fn_evals",
+    kind: "output",
+    label: "Function evaluation counts",
+    summary: "obj/grad/Jacobian/Hessian calls",
+    excerpt: "Number of objective function evaluations             = 10\nNumber of objective gradient evaluations             = 10\nNumber of equality constraint evaluations            = 10\nNumber of inequality constraint Jacobian evaluations = 10\nNumber of Lagrangian Hessian evaluations             = 9",
+    explain: "Each iteration calls f(x), ∇f(x), constraint values, constraint Jacobian, and Lagrangian Hessian roughly once. If function-eval counts EXCEED iteration counts by a lot, line search did many trial-evaluations — usually a sign of bad scaling. If they MATCH iter count, the line search accepted first try every time (healthy).",
+  },
+  {
+    key: "cpu_time",
+    kind: "output",
+    label: "CPU time line",
+    summary: "Excludes user functions",
+    excerpt: "Total CPU secs in IPOPT (w/o function evaluations)   = 0.014\nTotal CPU secs in NLP function evaluations          = 0.002",
+    explain: "IPOPT separates 'time spent in IPOPT' (linear-system solves, line search, barrier updates) from 'time spent calling YOUR functions'. If function evals dominate, your model is the bottleneck — look at gradient sparsity or AD overhead. If IPOPT time dominates, the linear solver is the bottleneck — try a different one (see warm-start / linear-solver feature below).",
+  },
+  {
+    key: "exit_code",
+    kind: "output",
+    label: "EXIT line",
+    summary: "Final IPOPT status",
+    excerpt: "EXIT: Optimal Solution Found.",
+    explain: "Possible EXIT messages: 'Optimal Solution Found', 'Solved To Acceptable Level' (relaxed tolerances satisfied), 'Converged To A Point Of Local Infeasibility', 'Iterates diverging; problem might be unbounded', 'Restoration Failed', 'Maximum Number Of Iterations Exceeded', 'Maximum CPU time exceeded'. Always parse this string — Pyomo's termination_condition normalizes some but not all.",
+  },
+];
+
+const IPOPT_FEATURES = [
+  {
+    key: "warm_start",
+    kind: "feature",
+    label: "Warm starts",
+    summary: "Re-solve fast after small data change",
+    excerpt: "solver = SolverFactory('ipopt')\nsolver.options['warm_start_init_point'] = 'yes'\nsolver.options['warm_start_bound_push'] = 1e-9\nsolver.options['warm_start_mult_bound_push'] = 1e-9\n\n# Set primal + dual values from previous solve\nfor v in model.component_data_objects(Var):\n    v.value = prior_primal[v.name]\nfor c in model.component_data_objects(Constraint):\n    model.dual[c] = prior_dual[c.name]\n\nsolver.solve(model)",
+    explain: "IPOPT supports primal-dual warm starts. Pass warm_start_init_point='yes' AND set initial values for both Var.value (primals) AND model.dual[c] (duals) before solving. The bound_push options control how far inside the box IPOPT moves your point. Typical speedup for repeated solves: 3–10× over cold start.",
+  },
+  {
+    key: "linear_solver",
+    kind: "feature",
+    label: "Linear-solver choice",
+    summary: "MUMPS / MA27 / MA57 / Pardiso",
+    excerpt: "solver.options['linear_solver'] = 'mumps'    # default, free\nsolver.options['linear_solver'] = 'ma27'     # HSL, fast, requires license\nsolver.options['linear_solver'] = 'ma57'     # HSL, parallel, faster than ma27\nsolver.options['linear_solver'] = 'pardiso'  # paid, very fast on big problems\nsolver.options['linear_solver'] = 'wsmp'     # IBM, free for academics",
+    explain: "EVERY IPOPT iteration solves a sparse symmetric indefinite linear system — that's the dominant cost on big problems. MUMPS ships with IPOPT and is fine for problems up to ~100k variables. MA27/MA57 (Harwell Subroutine Library) are 2–10× faster but require a license. For ML-scale problems, switching the linear solver is the single biggest win.",
+  },
+  {
+    key: "lbfgs",
+    kind: "feature",
+    label: "Limited-memory BFGS Hessian",
+    summary: "When exact Hessian is too expensive",
+    excerpt: "solver.options['hessian_approximation'] = 'limited-memory'\nsolver.options['limited_memory_max_history'] = 10  # # of stored pairs",
+    explain: "If your model's exact Hessian is too dense or too slow to compute, IPOPT can use L-BFGS instead — approximating the Hessian from gradient differences. Costs MORE iterations (typically 2–5× more) but each iteration is much cheaper. Useful for nonlinear least-squares with large residual count or NN-style models where Hessian is dense.",
+  },
+  {
+    key: "duals_pyomo",
+    kind: "feature",
+    label: "Dual extraction in Pyomo",
+    summary: "Suffix(direction=IMPORT) before solve",
+    excerpt: "model.dual = Suffix(direction=Suffix.IMPORT)\nmodel.rc   = Suffix(direction=Suffix.IMPORT)  # reduced costs\n\nsolver.solve(model)\n\nfor c in model.component_data_objects(Constraint):\n    print(c.name, 'λ =', model.dual[c])\nfor v in model.component_data_objects(Var):\n    print(v.name, 'rc =', model.rc[v])",
+    explain: "By default, Pyomo throws away IPOPT's dual variables. Declare a Suffix BEFORE solve to receive them. dual = Lagrange multipliers (shadow prices on each constraint). rc = reduced costs (multipliers on variable bounds). Critical for sensitivity analysis or KKT-condition verification.",
+  },
+  {
+    key: "callbacks",
+    kind: "feature",
+    label: "Intermediate callbacks (cyipopt)",
+    summary: "Hook into the solve",
+    excerpt: "# Use cyipopt directly (Pyomo wraps it but doesn't expose callbacks)\nimport cyipopt\n\nclass MyProblem(cyipopt.Problem):\n    def intermediate(self, alg_mod, iter, obj_value, inf_pr, inf_du, mu, d_norm, ...):\n        print(f'iter {iter}: obj={obj_value:.4f} inf_pr={inf_pr:.2e}')\n        if obj_value < 0.001:\n            return False  # request early termination\n        return True",
+    explain: "Through cyipopt (the Python interface to IPOPT) you can hook into every iteration. Use intermediate() to log custom diagnostics, plot convergence, or implement early stopping. Pyomo's SolverFactory doesn't expose this directly — you'd build the model in cyipopt instead.",
+  },
+  {
+    key: "scaling",
+    kind: "feature",
+    label: "Auto-scaling",
+    summary: "Let IPOPT normalize coefficients",
+    excerpt: "solver.options['nlp_scaling_method'] = 'gradient-based'  # default\nsolver.options['nlp_scaling_method'] = 'user-scaling'    # custom\nsolver.options['obj_scaling_factor'] = 1e-3              # tame huge objectives",
+    explain: "If your objective and constraints have wildly different magnitudes (e.g. cost in millions, distances in meters, time in seconds), IPOPT's defaults can struggle. nlp_scaling_method='gradient-based' (default) auto-rescales using gradient magnitudes at the start. For ill-conditioned problems, supply your own scaling factors via Suffix(direction=EXPORT, scaling_factor).",
+  },
+];
+
 const IPOPT_LOGS = {
   qp: {
+    extras: [...IPOPT_OUTPUT_EXTRAS, ...IPOPT_FEATURES],
     rows: [
       { cells: { iter: "  0", objective: "3.5000000e+00", inf_pr: "0.00e+00", inf_du: "5.00e-01", lg_mu: "-1.0", norm_d: "0.00e+00", lg_rg: "-", alpha_du: "0.00e+00", alpha_pr: "0.00e+00", ls: "0" } },
       { cells: { iter: "  1", objective: "2.4127510e+00", inf_pr: "0.00e+00", inf_du: "1.21e+00", lg_mu: "-1.0", norm_d: "7.05e-01", lg_rg: "-", alpha_du: "4.07e-01", alpha_pr: "1.00e+00f", ls: "1" } },
@@ -600,6 +688,7 @@ const IPOPT_LOGS = {
     },
   },
   disk: {
+    extras: [...IPOPT_OUTPUT_EXTRAS, ...IPOPT_FEATURES],
     rows: [
       { cells: { iter: "  0", objective: "4.2500000e+00", inf_pr: "0.00e+00", inf_du: "4.00e+00", lg_mu: "-1.0", norm_d: "0.00e+00", lg_rg: "-", alpha_du: "0.00e+00", alpha_pr: "0.00e+00", ls: "0" } },
       { cells: { iter: "  2", objective: "1.4071250e+00", inf_pr: "0.00e+00", inf_du: "7.10e-01", lg_mu: "-1.0", norm_d: "9.50e-01", lg_rg: "-", alpha_du: "3.20e-01", alpha_pr: "1.00e+00f", ls: "1" } },
@@ -623,6 +712,7 @@ const IPOPT_LOGS = {
     },
   },
   portfolio: {
+    extras: [...IPOPT_OUTPUT_EXTRAS, ...IPOPT_FEATURES],
     rows: [
       { cells: { iter: "  0", objective: "1.4500000e-02", inf_pr: "0.00e+00", inf_du: "1.20e-01", lg_mu: "-1.0", norm_d: "0.00e+00", lg_rg: "-", alpha_du: "0.00e+00", alpha_pr: "0.00e+00", ls: "0" } },
       { cells: { iter: "  3", objective: "6.0123104e-03", inf_pr: "0.00e+00", inf_du: "8.95e-03", lg_mu: "-2.5", norm_d: "1.85e-01", lg_rg: "-", alpha_du: "9.10e-01", alpha_pr: "1.00e+00f", ls: "1" } },
@@ -646,6 +736,7 @@ const IPOPT_LOGS = {
     },
   },
   hs71: {
+    extras: [...IPOPT_OUTPUT_EXTRAS, ...IPOPT_FEATURES],
     rows: [
       { cells: { iter: "  0", objective: "1.6109693e+01", inf_pr: "1.12e+01", inf_du: "5.28e-01", lg_mu: "-1.0", norm_d: "0.00e+00", lg_rg: "-", alpha_du: "0.00e+00", alpha_pr: "0.00e+00", ls: "0" } },
       { cells: { iter: "  1", objective: "1.6537219e+01", inf_pr: "7.89e-01", inf_du: "2.31e+00", lg_mu: "-1.0", norm_d: "1.22e+00", lg_rg: "-", alpha_du: "3.05e-01", alpha_pr: "1.00e+00f", ls: "1" } },

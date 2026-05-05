@@ -840,8 +840,91 @@ const GUROBI_MIP_COLS = [
   { key: "time", label: "Time", def: "Wall-clock seconds since solve started. Use to spot phase changes." },
 ];
 
+// ── Gurobi extras: output-section explanations + power-user features ──
+const GUROBI_OUTPUT_EXTRAS_COMMON = [
+  {
+    key: "version",
+    kind: "output",
+    label: "Version & threads",
+    summary: "First lines of the log",
+    excerpt: "Gurobi Optimizer version 11.0.2 build v11.0.2rc0 (mac64[arm])\nThread count: 8 physical cores, 8 logical processors",
+    explain: "Solver version + threading. Gurobi auto-detects cores and parallelizes branch-and-cut. To limit, set Params.Threads = N. The build hash is what to quote when filing a Gurobi support ticket.",
+  },
+  {
+    key: "fingerprint",
+    kind: "output",
+    label: "Model fingerprint",
+    summary: "Hash for caching / reproducibility",
+    excerpt: "Model fingerprint: 0x12345678",
+    explain: "A 32-bit hash of the model after presolve normalization. Two runs with the same fingerprint are guaranteed to produce identical results. Gurobi also uses it as a cache key for tuning data.",
+  },
+  {
+    key: "coef_stats",
+    kind: "output",
+    label: "Coefficient statistics",
+    summary: "Numeric ranges of coefficients",
+    excerpt: "Coefficient statistics:\n  Matrix range     [1e+00, 6e+01]\n  Objective range  [3e+00, 1e+02]\n  Bounds range     [1e+00, 1e+00]\n  RHS range        [1e+01, 6e+01]",
+    explain: "Gurobi reports min/max magnitudes of every coefficient class. RULE OF THUMB: max-to-min ratio within any block under 1e9. Above that, Gurobi will warn about numerical issues. A Matrix range of [1e-9, 1e9] usually means you're scaling units inconsistently — fix the model, don't crank tolerances.",
+  },
+  {
+    key: "presolve",
+    kind: "output",
+    label: "Presolve summary",
+    summary: "Rows/cols before vs after",
+    excerpt: "Presolve time: 0.00s\nPresolved: 5 rows, 8 columns, 18 nonzeros",
+    explain: "Presolve fixes redundant variables, tightens bounds, eliminates duplicate rows, etc. Often shrinks a model by 30–80%. If your presolved size is similar to the original, you may be able to do MORE upstream (e.g. drop slack variables). To disable presolve for debugging: Params.Presolve = 0.",
+  },
+];
+
+const GUROBI_LP_FEATURES = [
+  {
+    key: "warm_start_lp",
+    kind: "feature",
+    label: "Warm starts (LP)",
+    summary: "Re-solve faster using prior basis",
+    excerpt: "# Save / load a basis after each solve\nm.write('warm.bas')\nm.read('warm.bas')\n\n# Or set per-variable starting basis status\nx.VBasis = GRB.BASIC      # in basis\nx.VBasis = GRB.NONBASIC_LOWER  # at lower bound\n# Constraint side:\nc.CBasis = GRB.BASIC\n\n# Or supply a vector of variable values:\nm.NumStart = 1\nfor v, val in zip(m.getVars(), prior_solution):\n    v.Start = val",
+    explain: "When you change one coefficient and re-solve, Gurobi can reuse the previous basis instead of restarting from scratch. For mildly perturbed LPs this is a 10–100× speedup. Use cases: rolling-horizon optimization, parametric studies, sensitivity loops.",
+  },
+  {
+    key: "sensitivity",
+    kind: "feature",
+    label: "Sensitivity analysis",
+    summary: "How far can RHS / cost coefficients move?",
+    excerpt: "for c in m.getConstrs():\n    print(c.ConstrName, 'RHS in', c.SARHSLow, '..', c.SARHSUp)\nfor v in m.getVars():\n    print(v.VarName, 'obj in', v.SAObjLow, '..', v.SAObjUp)",
+    explain: "After an LP solve, every variable and constraint gets four 'sensitivity' attributes: SAObjLow/Up (range for the objective coefficient that keeps the basis optimal) and SARHSLow/Up (range for the RHS). Lets you answer 'what's the max wood price before I should change my plan?' without re-solving.",
+  },
+  {
+    key: "duals_lp",
+    kind: "feature",
+    label: "Dual / reduced-cost extraction",
+    summary: "c.Pi, v.RC after LP solve",
+    excerpt: "for c in m.getConstrs():\n    print(c.ConstrName, 'shadow price =', c.Pi)\nfor v in m.getVars():\n    print(v.VarName, 'reduced cost =', v.RC)",
+    explain: "Gurobi exposes duals on every constraint via .Pi (shadow price = marginal value of relaxing the constraint by one unit) and reduced costs on every variable via .RC (how much the objective coefficient would have to change before that variable enters the optimal basis). Both are zero-cost after the solve — no extra solve needed.",
+  },
+  {
+    key: "tuning",
+    kind: "feature",
+    label: "Auto-tuning (m.tune())",
+    summary: "Let Gurobi pick parameters",
+    excerpt: "m.Params.TuneTimeLimit = 60   # seconds\nm.tune()\n\n# Apply best parameter set found\nif m.tuneResultCount > 0:\n    m.getTuneResult(0)\n    m.optimize()\n    m.write('best.prm')",
+    explain: "Gurobi's tuning tool tries 100s of parameter combinations on YOUR model and picks the one that solved fastest. For repeatedly solved problems (production scheduling every night, etc.) this can yield 2–10× speedup. Tune once, save the .prm file, reuse forever.",
+  },
+];
+
 const GUROBI_LP_LOGS = {
   lp: {
+    extras: [
+      ...GUROBI_OUTPUT_EXTRAS_COMMON,
+      {
+        key: "lp_summary",
+        kind: "output",
+        label: "Final LP line",
+        summary: "Status + objective",
+        excerpt: "Solved in 3 iterations and 0.00 seconds (0.00 work units)\nOptimal objective  1.100000000e+03",
+        explain: "Two lines: total simplex iterations + work units (a normalized cross-machine metric Gurobi uses for benchmarks), then the optimal objective. If status were Infeasible or Unbounded you'd see 'Model is infeasible' or 'unbounded' here instead — and you'd want to set Params.InfUnbdInfo = 1 BEFORE the solve to get an irreducible inconsistent subset (IIS).",
+      },
+      ...GUROBI_LP_FEATURES,
+    ],
     setupText:
       "Gurobi Optimizer version 11.0.2 build v11.0.2rc0 (mac64[arm])\nThread count: 8 physical cores, 8 logical processors\nOptimize a model with 3 rows, 2 columns and 6 nonzeros\nModel fingerprint: 0x12345678\nCoefficient statistics:\n  Matrix range     [1e+00, 4e+00]\n  Objective range  [3e+01, 4e+01]\n  Bounds range     [0e+00, 0e+00]\n  RHS range        [3e+01, 1e+02]\nPresolve time: 0.00s\nPresolved: 3 rows, 2 columns, 6 nonzeros",
     rows: [
@@ -861,8 +944,143 @@ const GUROBI_LP_LOGS = {
   },
 };
 
+// ── MIP-shared output explanations ──
+const GUROBI_MIP_OUTPUT_EXTRAS = [
+  {
+    key: "vartypes",
+    kind: "output",
+    label: "Variable types breakdown",
+    summary: "How many binaries / integers / continuous",
+    excerpt: "Variable types: 6 continuous, 2 integer (2 binary)",
+    explain: "Counts of each variable kind in the original (pre-presolve) model. Watch the binary count especially — that's the upper bound on the search-tree depth. 'integer' includes both general integers and binaries; the (k binary) parenthetical breaks out the binary subset.",
+  },
+  {
+    key: "cuts",
+    kind: "output",
+    label: "Cutting planes summary",
+    summary: "What cut families fired",
+    excerpt: "Cutting planes:\n  Implied bound: 1\n  RLT: 4\n  BQP: 2\n  Gomory: 3\n  MIR: 5\n  Cover: 7\n  GUB cover: 1\n  Flow cover: 2",
+    explain: "Printed AFTER the solve, listing how many cuts of each family Gurobi added. Common families: Gomory (general MIP), MIR (mixed-integer rounding), Cover/GUB cover (knapsack), Flow cover (network), Implied bound (variable propagation), RLT (Reformulation–Linearization for products), BQP (Boolean Quadratic Polytope for binary quadratics), PSDLP (positive-semidefinite cuts for nonconvex Q), Zero half / Mod-K (lattice cuts). If you see 0 cuts but a slow solve, set Params.Cuts = 2 to be more aggressive.",
+  },
+  {
+    key: "soln_count",
+    kind: "output",
+    label: "Solution count",
+    summary: "How many distinct incumbents",
+    excerpt: "Solution count 3: 0.284102 0.412829 1.45203",
+    explain: "Gurobi keeps a SOLUTION POOL of all distinct feasible solutions found, ranked best-first. Only the best one is required, but the pool is useful for sensitivity, what-if scenarios, or reporting alternatives. Default capacity: 10. Tune via Params.PoolSolutions and Params.PoolSearchMode.",
+  },
+  {
+    key: "explored",
+    kind: "output",
+    label: "Explored line",
+    summary: "Total nodes + simplex pivots",
+    excerpt: "Explored 17 nodes (380 simplex iterations) in 0.08 seconds (0.00 work units)",
+    explain: "Total work summary. Watch nodes-vs-iterations together: 17 nodes / 380 iterations = ~22 LPs per node, which is on the high side but not pathological. If iterations dwarf nodes (say 10000 / 17), each LP is hard — try LP-method tuning. If nodes dwarf iterations (1000 / 100), LPs solve fast but branching is producing bad children — try strong branching or better cuts.",
+  },
+  {
+    key: "final_line",
+    kind: "output",
+    label: "Best objective / bound / gap",
+    summary: "The headline result",
+    excerpt: "Optimal solution found (tolerance 1.00e-04)\nBest objective 4.150000000000e+02, best bound 4.150000000000e+02, gap 0.0000%",
+    explain: "Final certificate. If 'gap' is 0%, the solution is provably optimal. If non-zero (say 'gap 2.34%'), Gurobi hit a TimeLimit or MIPGap parameter — the solution is feasible but its optimality is bounded by 'best bound'. ALWAYS check this line before trusting an answer.",
+  },
+];
+
+const GUROBI_MIP_FEATURES = [
+  {
+    key: "mip_start",
+    kind: "feature",
+    label: "MIP starts (warm starts)",
+    summary: "Hand Gurobi a known-good solution",
+    excerpt: "# Provide an initial feasible solution\nfor v, val in zip(m.getVars(), prior_solution):\n    v.Start = val\n\n# Multiple alternative starts\nm.NumStart = 2\nm.Params.StartNumber = 0\nfor v, val in zip(m.getVars(), heuristic1):\n    v.Start = val\nm.Params.StartNumber = 1\nfor v, val in zip(m.getVars(), heuristic2):\n    v.Start = val",
+    explain: "If you have a feasible solution from a previous run / heuristic / domain knowledge, set v.Start to seed Gurobi's incumbent. It immediately tightens the bound and lets cuts and pruning kick in earlier. Multiple starts (NumStart) let you provide alternatives. Crucial for repeatedly-solved models like daily scheduling.",
+  },
+  {
+    key: "callbacks",
+    kind: "feature",
+    label: "Callbacks: cuts / lazy / heuristics",
+    summary: "Inject logic into the search",
+    excerpt: "def cb(model, where):\n    if where == GRB.Callback.MIPSOL:\n        # New incumbent — check it satisfies a lazy constraint\n        x_val = model.cbGetSolution(model._x)\n        if violates_some_rule(x_val):\n            model.cbLazy(quicksum(x[i] for i in S) <= k)\n    elif where == GRB.Callback.MIPNODE:\n        # At a B&B node — add a user cut\n        if model.cbGet(GRB.Callback.MIPNODE_STATUS) == GRB.OPTIMAL:\n            x_val = model.cbGetNodeRel(model._x)\n            model.cbCut(my_cut_expr <= rhs)\n\nm._x = x  # stash references\nm.Params.LazyConstraints = 1\nm.optimize(cb)",
+    explain: "The callback API lets you HOOK INTO the solve. The most common uses: (1) lazy constraints — add cuts that hold but are too many to enumerate upfront, e.g. subtour elimination in TSP; (2) user cuts — strengthen the LP relaxation at fractional nodes; (3) post heuristic solutions via cbSetSolution. Set LazyConstraints=1 to enable the lazy callback path.",
+  },
+  {
+    key: "branch_priority",
+    kind: "feature",
+    label: "Branching priorities",
+    summary: "Tell Gurobi which vars to branch on first",
+    excerpt: "# High priority = branched on first\nfor j in J:\n    y[j].BranchPriority = 10\nfor i, j in IJ:\n    x[i, j].BranchPriority = 1\n\n# Negative = avoid branching\nslack.BranchPriority = -1",
+    explain: "BranchPriority biases the variable-selection rule. Higher priorities branched first. Useful when you know structure — e.g. in facility location, branching on 'open' binaries first usually closes the tree faster than branching on shipping flows. Default 0 means 'use Gurobi's auto-rules'.",
+  },
+  {
+    key: "solution_pool",
+    kind: "feature",
+    label: "Solution pool",
+    summary: "Find N best solutions",
+    excerpt: "m.Params.PoolSolutions = 10        # capacity\nm.Params.PoolSearchMode = 2        # 0=any, 1=top-N feasible, 2=top-N proven\nm.Params.PoolGap = 0.05            # accept solutions within 5% of optimal\nm.optimize()\n\n# Iterate over the pool\nfor k in range(m.SolCount):\n    m.Params.SolutionNumber = k\n    print(f'Solution {k}: obj = {m.PoolObjVal}')",
+    explain: "Beyond the optimum, Gurobi can return the top-N solutions. PoolSearchMode=2 PROVES the rank order; mode=1 just collects feasible solutions found incidentally during the regular solve. Useful when you need alternative plans (constraint slightly different in real-world acceptability), portfolio robustness, or post-hoc filtering.",
+  },
+  {
+    key: "duals_mip",
+    kind: "feature",
+    label: "Fixed-LP duals after MIP",
+    summary: "Lock integers, re-solve LP for shadow prices",
+    excerpt: "m.optimize()\n\n# Now fix all integer vars to their MIP values, re-solve as LP\nfixed = m.fixed()\nfixed.optimize()\n\nfor c in fixed.getConstrs():\n    print(c.ConstrName, 'shadow =', c.Pi)",
+    explain: "MIPs don't have meaningful LP-style duals. To get marginal-value information after a MIP, fix every integer variable to its incumbent value, drop the integrality, and re-solve as an LP. m.fixed() does exactly this. The LP duals tell you the shadow value of each constraint AT THE MIP OPTIMUM.",
+  },
+  {
+    key: "iis_irreducible",
+    kind: "feature",
+    label: "IIS for infeasible models",
+    summary: "Find a minimal infeasible subsystem",
+    excerpt: "m.optimize()\nif m.Status == GRB.INFEASIBLE:\n    m.computeIIS()\n    m.write('iis.ilp')\n    for c in m.getConstrs():\n        if c.IISConstr:\n            print('Conflicts:', c.ConstrName)",
+    explain: "When a model is infeasible, Gurobi's computeIIS() finds an irreducible inconsistent subsystem — a minimal set of constraints + bounds that is itself infeasible. Removing any one of them makes the IIS feasible. Indispensable when you have hundreds of constraints and 'INFEASIBLE' tells you nothing about which.",
+  },
+  {
+    key: "tuning",
+    kind: "feature",
+    label: "Auto-tuning (m.tune())",
+    summary: "Auto-pick parameters for YOUR model",
+    excerpt: "m.Params.TuneTimeLimit = 300\nm.tune()\nif m.tuneResultCount > 0:\n    m.getTuneResult(0)\n    m.write('best.prm')",
+    explain: "Tries 100s of parameter combinations on your model, picks the fastest. Save the .prm file and reuse forever. Particularly useful for repeatedly-solved production models — typical speedup is 2–10×. Big iterations cost time, but you only do it once per model class.",
+  },
+];
+
+const GUROBI_NONCONVEX_EXTRAS = [
+  {
+    key: "nonconvex_flag",
+    kind: "output",
+    label: '"Continuous model is non-convex"',
+    summary: "Confirms NonConvex=2 took effect",
+    excerpt: "Continuous model is non-convex -- solving as a MIP",
+    explain: "Gurobi prints this line when it detects nonconvex quadratics AND Params.NonConvex is set to 2. Without that param it would error: 'Q matrix is not positive semi-definite'. The phrase 'solving as a MIP' is meant literally: Gurobi reformulates products xy into auxiliary variables z = xy and branches on those, treating the problem as a structured MIP.",
+  },
+  {
+    key: "presolve_bilinear",
+    kind: "output",
+    label: "Presolved bilinear count",
+    summary: "How many products got linearized",
+    excerpt: "Presolved: 38 rows, 18 columns, 92 nonzeros\nPresolved model has 6 bilinear constraint(s)",
+    explain: "After NonConvex=2 presolve, the model BALLOONS — 5 cols becomes 18 (Gurobi added 13 auxiliary product variables) and 6 quadratic constraints become 38 linear-or-bilinear rows. The 'bilinear constraint(s)' count tells you how many product terms remain unconverted. Spatial branching happens on those.",
+  },
+  {
+    key: "qmatrix",
+    kind: "output",
+    label: "QMatrix / QLMatrix / QRHS",
+    summary: "Quadratic-coefficient ranges",
+    excerpt: "Coefficient statistics:\n  Matrix range     [0e+00, 0e+00]\n  QMatrix range    [1e-01, 1e+00]\n  QLMatrix range   [1e+00, 2e+00]\n  Objective range  [1e+00, 1e+00]\n  QRHS range       [1e-01, 3e+00]",
+    explain: "For models with quadratic CONSTRAINTS, Gurobi reports three extra ranges: QMatrix (the quadratic terms in q-cons), QLMatrix (the linear part of q-cons), and QRHS (the right-hand sides of q-cons). Same numerical-conditioning rule applies: ratios > 1e9 within any block flag scaling problems.",
+  },
+];
+
 const GUROBI_MIP_LOGS = {
   facility: {
+    extras: [
+      ...GUROBI_OUTPUT_EXTRAS_COMMON,
+      ...GUROBI_MIP_OUTPUT_EXTRAS,
+      ...GUROBI_MIP_FEATURES,
+    ],
     setupText:
       "Optimize a model with 5 rows, 8 columns and 18 nonzeros\nVariable types: 6 continuous, 2 integer (2 binary)\nCoefficient statistics:\n  Matrix range     [1e+00, 6e+01]\n  Objective range  [3e+00, 1e+02]\n  Bounds range     [1e+00, 1e+00]\n  RHS range        [1e+01, 6e+01]\nPresolve time: 0.00s\nPresolved: 5 rows, 8 columns, 18 nonzeros",
     rows: [
@@ -889,6 +1107,11 @@ const GUROBI_MIP_LOGS = {
     },
   },
   miqp: {
+    extras: [
+      ...GUROBI_OUTPUT_EXTRAS_COMMON,
+      ...GUROBI_MIP_OUTPUT_EXTRAS,
+      ...GUROBI_MIP_FEATURES,
+    ],
     setupText:
       "Optimize a model with 13 rows, 12 columns and 30 nonzeros\nModel has 21 quadratic objective terms\nVariable types: 6 continuous, 6 integer (6 binary)\nCoefficient statistics:\n  Matrix range     [1e+00, 5e+00]\n  Objective range  [0e+00, 0e+00]\n  QObjective range [1e-01, 5e+01]\nPresolve time: 0.01s\nPresolved: 13 rows, 12 columns, 30 nonzeros\nPresolved model has 21 quadratic objective terms",
     rows: [
@@ -917,6 +1140,12 @@ const GUROBI_MIP_LOGS = {
     },
   },
   bienstock: {
+    extras: [
+      ...GUROBI_OUTPUT_EXTRAS_COMMON,
+      ...GUROBI_NONCONVEX_EXTRAS,
+      ...GUROBI_MIP_OUTPUT_EXTRAS,
+      ...GUROBI_MIP_FEATURES,
+    ],
     setupText:
       "Optimize a model with 0 rows, 5 columns and 0 nonzeros\nModel has 6 quadratic constraints\nCoefficient statistics:\n  Matrix range     [0e+00, 0e+00]\n  QMatrix range    [1e-01, 1e+00]\n  QLMatrix range   [1e+00, 2e+00]\n  Objective range  [1e+00, 1e+00]\n  Bounds range     [1e+01, 1e+01]\n  RHS range        [0e+00, 0e+00]\n  QRHS range       [1e-01, 3e+00]\nContinuous model is non-convex -- solving as a MIP\n\nPresolve time: 0.01s\nPresolved: 38 rows, 18 columns, 92 nonzeros\nPresolved model has 6 bilinear constraint(s)",
     rows: [

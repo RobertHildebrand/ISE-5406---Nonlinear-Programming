@@ -583,8 +583,72 @@ const CVXPY_COLS = [
   { key: "step", label: "step", def: "Damped Newton step length. 1.0 = full Newton step (quadratic-convergence basin). < 0.5 means CLARABEL is staying cautious near the cones." },
 ];
 
+// ── CVXPY / CLARABEL extras ──
+const CVXPY_OUTPUT_EXTRAS = [
+  {
+    key: "setup",
+    kind: "output",
+    label: "Setup block (cone summary)",
+    summary: "Problem dimensions before iter table",
+    excerpt: "problem\n  variables     = 2\n  constraints   = 3 (linear inequalities) + 2 (variable nonneg)\n  cones         = 5 nonneg-orthant components",
+    explain: "CLARABEL prints what it sees AFTER CVXPY's canonicalization. The 'cones' line is most informative — it tells you which cone families CLARABEL has to project onto each iteration: nonneg-orthant (LP), zero (equality), SOC (second-order), PSD (semidefinite), exp (exponential), pow (power). If the count looks higher than your model, that's CVXPY adding auxiliary variables for atoms like norm1 or logistic.",
+  },
+  {
+    key: "termination",
+    kind: "output",
+    label: "Termination line",
+    summary: "Status + solve time",
+    excerpt: "terminated: optimal\nsolve time:    0.005 sec\nprimal obj :   -2.0500\ndual obj   :   -2.0500\ngap        :    9.5e-09",
+    explain: "Final block. Possible 'terminated' values: optimal, primal_infeasible, dual_infeasible, max_iter, time_limit, numerical_error, algebraic_error. Always check this before consuming prob.value. If status is 'optimal' but you're worried about precision, look at gap and pres/dres in the last iter row — sub-1e-6 means you're fine for ML, sub-1e-9 means you're at the limit of double precision.",
+  },
+];
+
+const CVXPY_FEATURES = [
+  {
+    key: "parameter",
+    kind: "feature",
+    label: "cp.Parameter for fast resolves (DPP)",
+    summary: "Change values without rebuilding problem",
+    excerpt: "lam = cp.Parameter(nonneg=True)\nprob = cp.Problem(cp.Minimize(loss + lam * cp.norm1(beta)))\n\nfor lam_val in [0.001, 0.01, 0.1, 1.0]:\n    lam.value = lam_val\n    prob.solve()  # MUCH faster after first solve\n    print(lam_val, prob.value)",
+    explain: "cp.Parameter is a knob you can re-set without rebuilding the Problem. Crucial for cross-validation, regularization-path computation, sensitivity studies. CVXPY uses DPP (Disciplined Parametrized Programming) to do canonicalization ONCE and reuse the compiled problem on subsequent solves — typically 100× speedup over rebuilding.",
+  },
+  {
+    key: "solver_choice",
+    kind: "feature",
+    label: "Solver-backend override",
+    summary: "Force CLARABEL / MOSEK / SCS / GUROBI / ECOS",
+    excerpt: "# CVXPY auto-picks based on problem class.\n# Override:\nprob.solve(solver=cp.MOSEK)        # commercial, fastest for SDP\nprob.solve(solver=cp.GUROBI)       # commercial, best for QP/MIP\nprob.solve(solver=cp.SCS)          # GPU-friendly, good for huge problems\nprob.solve(solver=cp.ECOS)         # tiny problems, very fast startup\nprob.solve(solver=cp.CLARABEL)     # default; modern Rust replacement for ECOS\n\n# Pass solver-specific options:\nprob.solve(solver=cp.MOSEK, mosek_params={'MSK_DPAR_INTPNT_TOL_REL_GAP': 1e-10})",
+    explain: "CVXPY auto-dispatches based on problem class (LP→CLARABEL, QP→OSQP/CLARABEL, SOCP→CLARABEL/ECOS, SDP→CLARABEL/MOSEK/SCS, MIP→GUROBI/CBC/MOSEK). Override when you have license access (MOSEK/GUROBI are usually fastest) or when defaults choke. cp.installed_solvers() shows what's actually available on your system.",
+  },
+  {
+    key: "duals",
+    kind: "feature",
+    label: "Dual / variable values",
+    summary: "After solve, inspect the primal+dual",
+    excerpt: "prob.solve()\nprint('x*    =', x.value)             # primal\nprint('λ_eq =', constraint_eq.dual_value)\nprint('λ_ineq =', constraint_ineq.dual_value)\nprint('shadow on every constraint:')\nfor c in prob.constraints:\n    print(c, '→', c.dual_value)",
+    explain: "After solve(), every Variable has a .value (the primal optimum) and every Constraint has a .dual_value (the Lagrange multiplier / shadow price). For inequalities, dual_value > 0 means the constraint is active. For equalities, the sign tells you which direction would loosen the optimum. Free — no extra solve required, comes back from the conic solver natively.",
+  },
+  {
+    key: "gradients",
+    kind: "feature",
+    label: "Differentiable optimization",
+    summary: "Gradient of solution w.r.t. parameters",
+    excerpt: "lam = cp.Parameter(nonneg=True, value=0.1)\nprob = cp.Problem(cp.Minimize(loss + lam * cp.norm1(beta)))\nprob.solve(requires_grad=True)\n\n# Backprop through the optimization\nlam.delta = 0.01    # perturb lam upward\nprob.derivative()\nprint('dβ/dλ:', beta.delta)  # how β shifts with λ",
+    explain: "CVXPY supports DIFFERENTIATING through the optimization (cvxpylayers under the hood). Useful for end-to-end ML pipelines where the inner optimization's solution feeds a downstream loss. Set requires_grad=True at solve, then call prob.derivative() to get sensitivities. Restricted to disciplined-parametrized problems.",
+  },
+  {
+    key: "warm_start_cvxpy",
+    kind: "feature",
+    label: "Warm starts",
+    summary: "Re-solve faster after small change",
+    excerpt: "prob.solve(warm_start=True)\n# CVXPY caches canonicalization between solves;\n# the solver also reuses prior iterate as a starting point.",
+    explain: "Pass warm_start=True (default for parametric problems). CVXPY keeps the canonicalization cache and CLARABEL/OSQP/Gurobi all support primal-dual restart. Combined with cp.Parameter, sequential solves often run 10–100× faster than the first.",
+  },
+];
+
 const CVXPY_LOGS = {
   lp: {
+    extras: [...CVXPY_OUTPUT_EXTRAS, ...CVXPY_FEATURES],
     setupText: "problem\n  variables     = 2\n  constraints   = 3 (linear inequalities) + 2 (variable nonneg)\n  cones         = 5 nonneg-orthant components\n  ----------------------\n  Status: solving",
     rows: [
       { cells: { iter: "  0", pcost: "+0.0000e+00", dcost: "-0.0000e+00", gap: "0.00e+00", pres: "3.00e+00", dres: "1.05e+00", kt: "1.00e+00", mu: "1.00e+00", step: "----" } },
@@ -608,6 +672,7 @@ const CVXPY_LOGS = {
     },
   },
   qp: {
+    extras: [...CVXPY_OUTPUT_EXTRAS, ...CVXPY_FEATURES],
     setupText: "problem\n  variables     = 4\n  constraints   = 4 nonneg + 1 ineq + 1 eq\n  cones         = 5 nonneg-orthant + 1 zero\n  PSD blocks    = 1 (4×4 from quad_form)\n  ----------------------\n  Status: solving",
     rows: [
       { cells: { iter: "  0", pcost: "+0.0000e+00", dcost: "+0.0000e+00", gap: "0.00e+00", pres: "1.00e+00", dres: "1.20e-01", kt: "1.00e+00", mu: "1.00e+00", step: "----" } },
@@ -631,6 +696,7 @@ const CVXPY_LOGS = {
     },
   },
   socp: {
+    extras: [...CVXPY_OUTPUT_EXTRAS, ...CVXPY_FEATURES],
     setupText: "problem\n  variables     = 2\n  cones         = 1 SOC (size 3)\n  ----------------------\n  Status: solving",
     rows: [
       { cells: { iter: "  0", pcost: "+0.0000e+00", dcost: "+0.0000e+00", gap: "0.00e+00", pres: "1.00e+00", dres: "1.00e+00", kt: "1.00e+00", mu: "1.00e+00", step: "----" } },
@@ -654,6 +720,7 @@ const CVXPY_LOGS = {
     },
   },
   sdp: {
+    extras: [...CVXPY_OUTPUT_EXTRAS, ...CVXPY_FEATURES],
     setupText: "problem\n  variables     = 1 (X, 2×2 symmetric → 3 free entries)\n  cones         = 1 PSD (size 2) + 1 zero (trace eq)\n  ----------------------\n  Status: solving",
     rows: [
       { cells: { iter: "  0", pcost: "+0.0000e+00", dcost: "+0.0000e+00", gap: "0.00e+00", pres: "1.00e+00", dres: "2.10e-01", kt: "1.00e+00", mu: "1.00e+00", step: "----" } },
@@ -677,6 +744,7 @@ const CVXPY_LOGS = {
     },
   },
   logreg: {
+    extras: [...CVXPY_OUTPUT_EXTRAS, ...CVXPY_FEATURES],
     setupText: "problem\n  variables     = 9 (β:8, b:1) + auxiliary u:8 (for ‖β‖₁) + s:50 (for cp.logistic)\n  cones         = 8 ExpCone (size 3 each, for log-sum-exp)\n              + 16 nonneg (for u ≥ ±β)\n              + 1 zero (offset)\n  ----------------------\n  Status: solving",
     rows: [
       { cells: { iter: "  0", pcost: "+0.0000e+00", dcost: "+0.0000e+00", gap: "0.00e+00", pres: "1.50e+01", dres: "3.00e+00", kt: "1.00e+00", mu: "1.00e+00", step: "----" } },

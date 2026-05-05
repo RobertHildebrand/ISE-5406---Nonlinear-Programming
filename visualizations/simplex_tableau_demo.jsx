@@ -130,6 +130,8 @@ export default function SimplexTableauDemo() {
   const [hoverCol, setHoverCol] = useState(null);
   const [practiceMode, setPracticeMode] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  // Last pivot performed (for row-operation playback). Stores T_before, row, col.
+  const [lastPivot, setLastPivot] = useState(null);
 
   const optimal = isOptimal(T, m, n);
   const rcosts = reducedCosts(T, m);
@@ -151,6 +153,7 @@ export default function SimplexTableauDemo() {
   }, [T, m, suggestedCol]);
 
   function doPivot(row, col) {
+    const T_before = T.map((r) => [...r]);
     const newT = pivot(T, row, col);
     const newBasis = [...basis];
     newBasis[row] = col;
@@ -160,6 +163,7 @@ export default function SimplexTableauDemo() {
     setStepIdx(newHistory.length - 1);
     setHoverCol(null);
     setFeedback(null);
+    setLastPivot({ T_before, row, col });
   }
 
   function handleColumnClick(j) {
@@ -213,6 +217,7 @@ export default function SimplexTableauDemo() {
     setStepIdx(0);
     setHoverCol(null);
     setFeedback(null);
+    setLastPivot(null);
   }
 
   return (
@@ -251,7 +256,7 @@ export default function SimplexTableauDemo() {
           <RotateCcw size={14} /> Reset to initial tableau
         </button>
         <button
-          onClick={() => setStepIdx(Math.max(0, stepIdx - 1))}
+          onClick={() => { setStepIdx(Math.max(0, stepIdx - 1)); setLastPivot(null); }}
           disabled={stepIdx === 0}
           style={btn}
         >
@@ -303,6 +308,16 @@ export default function SimplexTableauDemo() {
         </div>
         <div>
           <FeasibleRegionPlot T={T} basis={basis} n={n} m={m} A={A} b={b} />
+          {lastPivot && (
+            <PivotAlgebraPanel
+              T_before={lastPivot.T_before}
+              T_after={T}
+              row={lastPivot.row}
+              col={lastPivot.col}
+              n={n}
+              m={m}
+            />
+          )}
           {optimal && <SensitivityPanel T={T} basis={basis} n={n} m={m} A={A} b={b} c={c} />}
         </div>
       </div>
@@ -662,6 +677,85 @@ function SensitivityPanel({ T, basis, n, m, A, b, c }) {
     </div>
   );
 }
+
+// ============================================================
+// Pivot algebra panel — shows the elementary row operations
+// performed during the most recent pivot, written out in TeX.
+// ============================================================
+function PivotAlgebraPanel({ T_before, T_after, row, col, n, m }) {
+  const pivVal = T_before[row][col];
+  const colName = col < n ? `x_${col + 1}` : `s_${col - n + 1}`;
+  const rowName = row === m ? "z" : `R_${row + 1}`;
+
+  // List elimination ops (one per row != pivot row that had non-zero in col)
+  const elims = [];
+  for (let i = 0; i < T_before.length; i++) {
+    if (i === row) continue;
+    const f = T_before[i][col];
+    if (Math.abs(f) < 1e-12) continue;
+    elims.push({ i, factor: f });
+  }
+
+  return (
+    <div style={{ ...panel, marginTop: 12 }}>
+      <div style={{ fontFamily: "monospace", fontSize: 10, color: "#888", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 6 }}>
+        Pivot algebra — what just happened
+      </div>
+      <div style={{ fontSize: 13, marginBottom: 6 }}>
+        Pivoted at <Tex>{`(${rowName},\\, ${colName})`}</Tex>; pivot value{" "}
+        <Tex>{`a_{pq} = ${fmt(pivVal)}`}</Tex>.
+      </div>
+
+      {Math.abs(pivVal - 1) > 1e-9 && (
+        <div style={algStep}>
+          <span style={{ fontWeight: 600 }}>1. Scale the pivot row.</span>
+          <Tex block>
+            {`${rowName} \\;\\leftarrow\\; \\frac{1}{${fmt(pivVal)}} \\, ${rowName}`}
+          </Tex>
+        </div>
+      )}
+
+      <div style={algStep}>
+        <span style={{ fontWeight: 600 }}>
+          {Math.abs(pivVal - 1) > 1e-9 ? "2. " : "1. "}Eliminate column{" "}
+          <Tex>{colName}</Tex> in every other row.
+        </span>
+        {elims.length === 0 ? (
+          <div style={{ fontSize: 12, color: "#666", marginTop: 4, fontStyle: "italic" }}>
+            (column already zero everywhere except the pivot row — no work to do.)
+          </div>
+        ) : (
+          <div style={{ marginTop: 4 }}>
+            {elims.map((e, k) => {
+              const rname = e.i === m ? "z" : `R_${e.i + 1}`;
+              return (
+                <Tex key={k} block>
+                  {`${rname} \\;\\leftarrow\\; ${rname} \\;-\\; (${fmt(e.factor)})\\, ${rowName}`}
+                </Tex>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div style={{ fontSize: 12, color: "#555", marginTop: 6 }}>
+        After these row operations, column <Tex>{colName}</Tex> is the unit
+        vector with 1 in row {row + 1} and 0 elsewhere — exactly what's
+        needed for <Tex>{colName}</Tex> to be the new basic variable in
+        row {row + 1}.
+      </div>
+    </div>
+  );
+}
+
+const algStep = {
+  marginTop: 6,
+  padding: "8px 10px",
+  background: "#fff",
+  border: "1px solid #e3e3e3",
+  borderRadius: 6,
+  fontSize: 13,
+};
 
 // ============================================================
 // Pivot rules panel
