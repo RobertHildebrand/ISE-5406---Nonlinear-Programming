@@ -20,6 +20,9 @@ import GoogleToolsTutorial from '../google_tools_tutorial.jsx';
 import FrankWolfeDemo from '../frank_wolfe_demo.jsx';
 import SosDemo from '../sos_demo.jsx';
 import AlgebraicOptDemo from '../algebraic_opt_demo.jsx';
+import BranchBoundDemo from '../branch_bound_demo.jsx';
+import FistaDemo from '../fista_demo.jsx';
+import GanttDemo from '../gantt_demo.jsx';
 import PyTorchTutorial from '../pytorch_tutorial.jsx';
 import MLCompare from '../ml_compare.jsx';
 import NLPApplications from '../nlp_applications.jsx';
@@ -172,6 +175,22 @@ const DEMOS = [
 
   // ── Advanced topics ────────────────────────────────────────────
   {
+    id: 'branch-bound',
+    category: 'advanced',
+    title: 'Branch-and-Bound Tree Explorer',
+    description:
+      "Watch a small MILP get solved one node at a time. Click any node to see its LP relaxation; the tree panel shows branching decisions, fathoming, and the primal/dual gap closing.",
+    Component: BranchBoundDemo,
+  },
+  {
+    id: 'fista',
+    category: 'advanced',
+    title: 'Proximal Gradient & FISTA',
+    description:
+      "Lasso-style 2D problem. ISTA vs FISTA side-by-side, with the soft-thresholding step explicit and the Nesterov-momentum extrapolation drawn as a separate point on the contour plot.",
+    Component: FistaDemo,
+  },
+  {
     id: 'frank-wolfe',
     category: 'advanced',
     title: 'Frank-Wolfe with Active Vertex Tracking',
@@ -194,6 +213,14 @@ const DEMOS = [
     description:
       "Lagrange multipliers on an algebraic curve x⁴ + y⁴ = 1. Plot shows the objective contours, constraint curve, and all four real critical points. Three computational paths: sympy, homotopy continuation, SOS lifting.",
     Component: AlgebraicOptDemo,
+  },
+  {
+    id: 'gantt',
+    category: 'advanced',
+    title: 'Job-Shop Gantt Chart (CP-SAT)',
+    description:
+      "The numerical answer from the CP-SAT job-shop demo turned into a picture. Three jobs, three machines, makespan 11. Toggle between machine view and job view; hover any block to highlight its job and machine neighbors.",
+    Component: GanttDemo,
   },
 
   // ── In-class tutorials ─────────────────────────────────────────
