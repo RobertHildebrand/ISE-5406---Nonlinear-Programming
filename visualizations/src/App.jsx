@@ -23,6 +23,10 @@ import AlgebraicOptDemo from '../algebraic_opt_demo.jsx';
 import BranchBoundDemo from '../branch_bound_demo.jsx';
 import FistaDemo from '../fista_demo.jsx';
 import GanttDemo from '../gantt_demo.jsx';
+import DualitySensitivityDemo from '../duality_sensitivity_demo.jsx';
+import SimplexTableauDemo from '../simplex_tableau_demo.jsx';
+import HeuristicsDemo from '../heuristics_demo.jsx';
+import DecompositionDemo from '../decomposition_demo.jsx';
 import PyTorchTutorial from '../pytorch_tutorial.jsx';
 import MLCompare from '../ml_compare.jsx';
 import NLPApplications from '../nlp_applications.jsx';
@@ -174,6 +178,38 @@ const DEMOS = [
   },
 
   // ── Advanced topics ────────────────────────────────────────────
+  {
+    id: 'simplex-tableau',
+    category: 'advanced',
+    title: 'Interactive Simplex Tableau',
+    description:
+      "Click-to-pivot tableau with practice mode. Click a column to enter, see the ratio test, click a row to pivot. Feasible-region plot tracks the current vertex. Sensitivity + duality panel appears when optimal.",
+    Component: SimplexTableauDemo,
+  },
+  {
+    id: 'duality-sensitivity',
+    category: 'advanced',
+    title: 'LP Duality & Sensitivity Analysis',
+    description:
+      "Slide the constraint right-hand-sides; watch the feasible region deform, the optimum vertex jump, and the shadow prices update live. Dual problem displayed alongside the primal. Sensitivity ranges shown as bars.",
+    Component: DualitySensitivityDemo,
+  },
+  {
+    id: 'decomposition',
+    category: 'advanced',
+    title: 'IP Decomposition: Benders, Dantzig-Wolfe, Lagrangian',
+    description:
+      "Three classical decompositions side-by-side. Master/subproblem split, bound progression chart, per-iteration table, and pseudocode for each method.",
+    Component: DecompositionDemo,
+  },
+  {
+    id: 'heuristics',
+    category: 'advanced',
+    title: 'Heuristics & Metaheuristics (TSP + Knapsack)',
+    description:
+      "Animated 2-opt local search and simulated annealing on a 15-city TSP, plus a genetic algorithm on 0-1 knapsack. Watch the tour rearrange itself in real time.",
+    Component: HeuristicsDemo,
+  },
   {
     id: 'branch-bound',
     category: 'advanced',
