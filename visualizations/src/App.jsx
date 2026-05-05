@@ -16,6 +16,10 @@ import CVXPYTutorial from '../cvxpy_tutorial.jsx';
 import ScipyTutorial from '../scipy_tutorial.jsx';
 import ScipTutorial from '../scip_tutorial.jsx';
 import GurobiTutorial from '../gurobi_tutorial.jsx';
+import GoogleToolsTutorial from '../google_tools_tutorial.jsx';
+import FrankWolfeDemo from '../frank_wolfe_demo.jsx';
+import SosDemo from '../sos_demo.jsx';
+import AlgebraicOptDemo from '../algebraic_opt_demo.jsx';
 import PyTorchTutorial from '../pytorch_tutorial.jsx';
 import MLCompare from '../ml_compare.jsx';
 import NLPApplications from '../nlp_applications.jsx';
@@ -58,6 +62,12 @@ const CATEGORIES = [
     title: 'Neural Networks',
     blurb: 'Forward and backward pass, training, learned vs target.',
     accent: '#1f4e3d',
+  },
+  {
+    id: 'advanced',
+    title: 'Advanced Topics',
+    blurb: 'Conditional gradient, polynomial / SOS optimization, algebraic methods.',
+    accent: '#7a3da0',
   },
   {
     id: 'tutorials',
@@ -160,6 +170,32 @@ const DEMOS = [
     Component: NeuralNetViz,
   },
 
+  // ── Advanced topics ────────────────────────────────────────────
+  {
+    id: 'frank-wolfe',
+    category: 'advanced',
+    title: 'Frank-Wolfe with Active Vertex Tracking',
+    description:
+      "Conditional gradient on a polytope. Watch the active vertex set grow and the iterate jump to the closest point in conv(S) at each step. Vanilla FW vs fully-corrective FW side-by-side. Drag the target.",
+    Component: FrankWolfeDemo,
+  },
+  {
+    id: 'sos',
+    category: 'advanced',
+    title: 'Polynomial Optimization & SOS',
+    description:
+      "Lasserre's hierarchy in action. Slide the SOS order to watch the lower bound λ_d tighten on a univariate polynomial. The moment-matrix structure plus a CVXPY code stepper.",
+    Component: SosDemo,
+  },
+  {
+    id: 'algebraic-opt',
+    category: 'advanced',
+    title: 'Algebraic Optimization',
+    description:
+      "Lagrange multipliers on an algebraic curve x⁴ + y⁴ = 1. Plot shows the objective contours, constraint curve, and all four real critical points. Three computational paths: sympy, homotopy continuation, SOS lifting.",
+    Component: AlgebraicOptDemo,
+  },
+
   // ── In-class tutorials ─────────────────────────────────────────
   {
     id: 'perceptron-tutorial',
@@ -216,6 +252,14 @@ const DEMOS = [
     description:
       'Industrial MIP solver: production LP, facility-location MILP, cardinality-constrained MIQP, and Bienstock\'s nonconvex problem with NonConvex=2. Includes a column-by-column reader for Gurobi\'s log.',
     Component: GurobiTutorial,
+  },
+  {
+    id: 'google-tools-tutorial',
+    category: 'tutorials',
+    title: 'Google OR-Tools — Code Stepper',
+    description:
+      'Three Google solvers: PDLP (matrix-free LP for million-variable problems), specialized network-flow (min-cost-flow / max-flow / assignment), and CP-SAT (job-shop scheduling). Each with column-by-column log reader.',
+    Component: GoogleToolsTutorial,
   },
   {
     id: 'pytorch-tutorial',
