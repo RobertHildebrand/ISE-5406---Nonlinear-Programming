@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { Terminal } from "lucide-react";
+import { CopyCodeButton, DownloadNotebookButton } from "./code_panel_utils.jsx";
 
 /* ============================================================
    ML — SAME PROBLEM, MULTIPLE WAYS TO SOLVE IT
@@ -362,6 +363,16 @@ function ApproachCard({ accent, data }) {
       <div style={{ padding: "8px 14px", fontSize: 12, color: "#444" }}>
         {data.verdict}
       </div>
+      <div style={{ display: "flex", gap: 6, padding: "6px 12px", borderTop: "1px solid #eee", borderBottom: "1px solid #eee", background: "#fafafa" }}>
+        <CopyCodeButton code={data.code.slice(1).join("\n")} label="Copy" />
+        <DownloadNotebookButton
+          code={data.code.slice(1).join("\n")}
+          filename={`ml_compare_${(data.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "_")}.ipynb`}
+          title={data.name}
+          description={data.verdict || ""}
+          label=".ipynb"
+        />
+      </div>
       <div
         style={{
           fontFamily: "'JetBrains Mono', Menlo, ui-monospace, monospace",
@@ -373,6 +384,7 @@ function ApproachCard({ accent, data }) {
           lineHeight: "20px",
           flex: 1,
           overflowX: "auto",
+          overflowY: "hidden",
         }}
       >
         {data.code.map((line, i) => {
@@ -385,6 +397,8 @@ function ApproachCard({ accent, data }) {
               style={{
                 display: "flex",
                 padding: "0 12px",
+                width: "max-content",
+                minWidth: "100%",
               }}
             >
               <span
@@ -395,11 +409,12 @@ function ApproachCard({ accent, data }) {
                   marginRight: 10,
                   fontSize: 10,
                   userSelect: "none",
+                  flexShrink: 0,
                 }}
               >
                 {i}
               </span>
-              <span style={{ whiteSpace: "pre" }}>{line}</span>
+              <span style={{ whiteSpace: "pre", flexShrink: 0 }}>{line}</span>
             </div>
           );
         })}

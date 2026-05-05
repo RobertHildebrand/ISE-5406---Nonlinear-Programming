@@ -890,7 +890,8 @@ function CodePanel({ codeLines, highlightedLine }) {
         color: "#e8e2d4",
         padding: "12px 0",
         borderRadius: 8,
-        overflow: "hidden",
+        overflowX: "auto",
+        overflowY: "hidden",
         lineHeight: `${lineHeight}px`,
         minHeight: codeLines.length * lineHeight + 24,
       }}
@@ -910,6 +911,8 @@ function CodePanel({ codeLines, highlightedLine }) {
               minHeight: lineHeight,
               background: active ? "#3b3526" : isHeader ? "#2c2922" : "transparent",
               borderLeft: active ? "3px solid #f5a524" : "3px solid transparent",
+              width: "max-content",
+              minWidth: "100%",
             }}
           >
             <span

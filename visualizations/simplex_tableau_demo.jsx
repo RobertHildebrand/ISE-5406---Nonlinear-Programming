@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Terminal, RotateCcw } from "lucide-react";
+import { Terminal, RotateCcw, Download, AlertTriangle } from "lucide-react";
 import { Tex } from "./math.jsx";
 
 /* ============================================================
@@ -34,6 +34,36 @@ const DEFAULT_A = [
   [1, 3],
 ];
 const DEFAULT_B = [8, 6];
+
+// ============================================================
+// Preset LPs
+// ============================================================
+const PRESETS = [
+  {
+    key: "wood_labor",
+    name: "Wood & Labor (2D classic)",
+    blurb: "The standard textbook starter. Two products, two resources, two ≤-constraints. Optimum at (3.6, 0.8), z* = 14.8.",
+    c: [3, 5], A: [[2, 1], [1, 3]], b: [8, 6],
+  },
+  {
+    key: "production_3d",
+    name: "Production planning (3D — three products)",
+    blurb: "Three products, three machine-time constraints. The 3-variable, 3-constraint case — the smallest size where you really see the tableau machinery 'matter' (slacks become more interesting, BFS no longer reads off in 2 numbers).",
+    c: [5, 4, 3], A: [[2, 3, 1], [4, 1, 2], [3, 4, 2]], b: [5, 11, 8],
+  },
+  {
+    key: "diet_small",
+    name: "Diet — minimize cost",
+    blurb: "Two foods, two nutrient floors. Re-cast as a max problem: max -(cost) so the canonical-form simplex still applies. Showcases how a min-LP becomes a max-LP with negated coefficients.",
+    c: [-2, -3], A: [[1, 2], [3, 1]], b: [4, 5],
+  },
+  {
+    key: "lazy_constraint",
+    name: "One slack stays in the basis",
+    blurb: "The second constraint has plenty of slack. At the optimum its slack variable s₂ stays basic — meaning π₂ = 0 (no shadow price) and the constraint isn't binding.",
+    c: [3, 2], A: [[2, 1], [1, 4]], b: [10, 20],
+  },
+];
 
 // ============================================================
 // Tableau state
@@ -111,20 +141,57 @@ function variableLabel(idx, n) {
   return `s${idx - n + 1}`;
 }
 
+function tableauToMarkdown({ T, basis, n, m }) {
+  const totalCols = n + m + 1;
+  const headers = ["basis"];
+  for (let j = 0; j < n; j++) headers.push(`x${j + 1}`);
+  for (let j = 0; j < m; j++) headers.push(`s${j + 1}`);
+  headers.push("RHS");
+  const lines = [];
+  lines.push("| " + headers.join(" | ") + " |");
+  lines.push("|" + headers.map(() => "---").join("|") + "|");
+  // z-row first (top)
+  const zRow = ["**z**"];
+  for (let j = 0; j < n + m; j++) zRow.push(fmt(T[m][j]));
+  zRow.push("**" + fmt(T[m][n + m]) + "**");
+  lines.push("| " + zRow.join(" | ") + " |");
+  for (let i = 0; i < m; i++) {
+    const row = [variableLabel(basis[i], n)];
+    for (let j = 0; j < n + m; j++) row.push(fmt(T[i][j]));
+    row.push("**" + fmt(T[i][n + m]) + "**");
+    lines.push("| " + row.join(" | ") + " |");
+  }
+  return lines.join("\n");
+}
+
 // ============================================================
 // Main component
 // ============================================================
 export default function SimplexTableauDemo() {
-  const [c] = useState(DEFAULT_C);
-  const [A] = useState(DEFAULT_A);
-  const [b] = useState(DEFAULT_B);
+  const [c, setC] = useState(DEFAULT_C);
+  const [A, setA] = useState(DEFAULT_A);
+  const [b, setB] = useState(DEFAULT_B);
+  const [presetKey, setPresetKey] = useState(PRESETS[0].key);
   const initial = useMemo(() => buildInitialTableau(c, A, b), [c, A, b]);
 
   // History of (T, basis) so we can step backward
   const [history, setHistory] = useState([initial]);
   const [stepIdx, setStepIdx] = useState(0);
+  // Pivot log: parallel to history; entry i records the pivot taken between
+  // history[i] and history[i+1].
+  const [pivotLog, setPivotLog] = useState([]);
   const cur = history[stepIdx];
   const { T, basis, n, m } = cur;
+
+  // When LP changes, rebuild the initial tableau and clear history
+  function loadPreset(key) {
+    const p = PRESETS.find((x) => x.key === key);
+    if (!p) return;
+    setPresetKey(key);
+    setC([...p.c]);
+    setA(p.A.map((r) => [...r]));
+    setB([...p.b]);
+  }
 
   // Pivot column the user has selected (null = none)
   const [hoverCol, setHoverCol] = useState(null);
@@ -132,6 +199,17 @@ export default function SimplexTableauDemo() {
   const [feedback, setFeedback] = useState(null);
   // Last pivot performed (for row-operation playback). Stores T_before, row, col.
   const [lastPivot, setLastPivot] = useState(null);
+
+  // Whenever the LP coefficients change, reset history to the new initial.
+  React.useEffect(() => {
+    setHistory([initial]);
+    setStepIdx(0);
+    setHoverCol(null);
+    setFeedback(null);
+    setLastPivot(null);
+    setPivotLog([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial]);
 
   const optimal = isOptimal(T, m, n);
   const rcosts = reducedCosts(T, m);
@@ -156,11 +234,21 @@ export default function SimplexTableauDemo() {
     const T_before = T.map((r) => [...r]);
     const newT = pivot(T, row, col);
     const newBasis = [...basis];
+    const leaving = newBasis[row];
     newBasis[row] = col;
     const newHistory = history.slice(0, stepIdx + 1);
     newHistory.push({ T: newT, basis: newBasis, n, m });
     setHistory(newHistory);
     setStepIdx(newHistory.length - 1);
+    const newLog = pivotLog.slice(0, stepIdx);
+    newLog.push({
+      row,
+      col,
+      pivVal: T_before[row][col],
+      entering: variableLabel(col, n),
+      leaving: variableLabel(leaving, n),
+    });
+    setPivotLog(newLog);
     setHoverCol(null);
     setFeedback(null);
     setLastPivot({ T_before, row, col });
@@ -169,11 +257,12 @@ export default function SimplexTableauDemo() {
   function handleColumnClick(j) {
     if (j >= n + m) return;
     if (rcosts[j] >= -1e-9) {
-      if (practiceMode)
-        setFeedback({
-          ok: false,
-          msg: `Column ${variableLabel(j, n)} has reduced cost ${rcosts[j].toFixed(2)} ≥ 0 — picking it would not improve the objective.`,
-        });
+      // ALWAYS warn — picking a column with non-negative reduced cost can't improve.
+      setFeedback({
+        ok: false,
+        severity: "warn",
+        msg: `Column ${variableLabel(j, n)} has reduced cost ${rcosts[j].toFixed(2)} ≥ 0 — picking it would NOT improve the objective. Pick a column with a negative reduced cost (red).`,
+      });
       return;
     }
     if (practiceMode) {
@@ -189,6 +278,8 @@ export default function SimplexTableauDemo() {
           msg: `${variableLabel(j, n)} is valid (reduced cost ${rcosts[j].toFixed(2)}), but Dantzig's rule prefers the most-negative: ${dantzig}.`,
         });
       }
+    } else {
+      setFeedback(null);
     }
     setHoverCol(j);
   }
@@ -197,19 +288,24 @@ export default function SimplexTableauDemo() {
     if (hoverCol === null) return;
     const { minRow } = ratioTest(T, m, hoverCol);
     if (T[i][hoverCol] <= 1e-9) {
-      if (practiceMode)
-        setFeedback({
-          ok: false,
-          msg: `Row ${i + 1} has aᵢⱼ ≤ 0 in column ${variableLabel(hoverCol, n)} — invalid pivot.`,
-        });
-      return;
-    }
-    if (practiceMode && i !== minRow)
+      // ALWAYS warn on invalid pivot — would unbound or give nonsense.
       setFeedback({
         ok: false,
-        msg: `Row ${i + 1} would give negative RHS after pivot. The min-ratio test points to row ${minRow + 1}.`,
+        severity: "error",
+        msg: `INVALID PIVOT: aᵢⱼ = ${T[i][hoverCol].toFixed(3)} ≤ 0 in row ${i + 1}, column ${variableLabel(hoverCol, n)}. Pivoting here would either be impossible (zero) or violate non-negativity (negative). Rules: only rows with aᵢⱼ > 0 are eligible — these are highlighted in yellow when you select a column.`,
       });
-    else doPivot(i, hoverCol);
+      return;
+    }
+    if (i !== minRow) {
+      // ALWAYS warn — picking a non-min-ratio row gives negative RHS in some basic var.
+      setFeedback({
+        ok: false,
+        severity: "error",
+        msg: `INFEASIBLE: pivoting in row ${i + 1} would force a basic variable negative (basis would no longer be feasible). The min-ratio test selects row ${minRow + 1}. Click row ${minRow + 1} (the green one) to proceed.`,
+      });
+      return;
+    }
+    doPivot(i, hoverCol);
   }
 
   function reset() {
@@ -218,6 +314,62 @@ export default function SimplexTableauDemo() {
     setHoverCol(null);
     setFeedback(null);
     setLastPivot(null);
+    setPivotLog([]);
+  }
+
+  // Generate a Markdown report of the work done so far
+  function buildReport() {
+    const lines = [];
+    lines.push(`# Simplex Tableau — Worked Solution`);
+    lines.push("");
+    lines.push(`## LP`);
+    lines.push("");
+    lines.push("```");
+    lines.push(`max  ${c.map((v, j) => `${j === 0 ? "" : v < 0 ? " - " : " + "}${j === 0 && v < 0 ? "-" : ""}${Math.abs(v)} x_${j + 1}`).join("")}`);
+    lines.push(`s.t.`);
+    A.forEach((row, i) => {
+      lines.push(`     ${row.map((v, j) => `${j === 0 ? "" : v < 0 ? " - " : " + "}${j === 0 && v < 0 ? "-" : ""}${Math.abs(v)} x_${j + 1}`).join("")}  <=  ${b[i]}`);
+    });
+    lines.push(`     x >= 0`);
+    lines.push("```");
+    lines.push("");
+
+    history.forEach((step, i) => {
+      lines.push(`## Tableau ${i}${i === 0 ? " — initial" : ""}`);
+      lines.push("");
+      if (i > 0) {
+        const p = pivotLog[i - 1];
+        if (p) {
+          lines.push(`Pivot: row ${p.row + 1}, column ${p.entering} (leaving: ${p.leaving}, pivot value ${p.pivVal.toFixed(4)})`);
+          lines.push("");
+        }
+      }
+      lines.push(tableauToMarkdown(step));
+      lines.push("");
+    });
+
+    if (isOptimal(history[history.length - 1].T, m, n)) {
+      const fin = history[history.length - 1];
+      lines.push(`## Optimal`);
+      lines.push("");
+      lines.push(`z* = ${fmt(fin.T[m][n + m])}`);
+      lines.push("");
+      lines.push(`Basis: { ${fin.basis.map((b2) => variableLabel(b2, n)).join(", ")} }`);
+    }
+
+    return lines.join("\n");
+  }
+  function downloadReport() {
+    const md = buildReport();
+    const blob = new Blob([md], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `simplex_${presetKey}_${history.length - 1}pivots.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   return (
@@ -234,11 +386,14 @@ export default function SimplexTableauDemo() {
         when you pick the wrong column or row.
       </p>
 
-      <div style={problemBox}>
-        <Tex block>
-          {String.raw`\begin{aligned} \max\;\; & 3 x_1 + 5 x_2 \\ \text{s.t.}\;\; & 2 x_1 + x_2 \le 8 \\ & x_1 + 3 x_2 \le 6 \\ & x_1, x_2 \ge 0 \end{aligned}`}
-        </Tex>
-      </div>
+      <PresetPicker
+        presetKey={presetKey}
+        loadPreset={loadPreset}
+      />
+
+      <ProblemEditor c={c} A={A} b={b} setC={setC} setA={setA} setB={setB} />
+
+      <FormulaPanel c={c} A={A} b={b} n={n} m={m} />
 
       <div style={{ marginBottom: 12, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
         <label style={{ fontSize: 13 }}>
@@ -262,6 +417,9 @@ export default function SimplexTableauDemo() {
         >
           ← Undo pivot
         </button>
+        <button onClick={downloadReport} style={btn} title="Download a Markdown record of the LP, every tableau, and every pivot">
+          <Download size={14} /> Save work
+        </button>
         <span style={{ fontSize: 12, fontFamily: "monospace", color: "#666" }}>
           step {stepIdx} / {history.length - 1}
         </span>
@@ -271,14 +429,24 @@ export default function SimplexTableauDemo() {
         <div
           style={{
             marginBottom: 12,
-            padding: "8px 12px",
-            background: feedback.ok ? "#e8f5e9" : "#fde8e8",
-            border: `1px solid ${feedback.ok ? "#7dd87d" : "#c8311c"}`,
+            padding: "10px 14px",
+            background: feedback.ok ? "#e8f5e9"
+              : feedback.severity === "error" ? "#fde8e8"
+              : "#fff8e1",
+            border: `2px solid ${feedback.ok ? "#7dd87d"
+              : feedback.severity === "error" ? "#c8311c"
+              : "#f5a524"}`,
             borderRadius: 6,
             fontSize: 13,
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 10,
           }}
         >
-          {feedback.msg}
+          {!feedback.ok && (
+            <AlertTriangle size={18} color={feedback.severity === "error" ? "#c8311c" : "#a06700"} style={{ flexShrink: 0, marginTop: 1 }} />
+          )}
+          <div>{feedback.msg}</div>
         </div>
       )}
 
@@ -329,6 +497,174 @@ export default function SimplexTableauDemo() {
 }
 
 // ============================================================
+// Preset picker
+// ============================================================
+function PresetPicker({ presetKey, loadPreset }) {
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ fontFamily: "monospace", fontSize: 11, color: "#666", letterSpacing: "0.12em", marginBottom: 6, textTransform: "uppercase" }}>
+        examples — click one to load
+      </div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {PRESETS.map((p) => (
+          <button
+            key={p.key}
+            onClick={() => loadPreset(p.key)}
+            style={{
+              padding: "8px 14px",
+              border: presetKey === p.key ? "1px solid #1f4e3d" : "1px solid #ccc",
+              borderRadius: 6,
+              background: presetKey === p.key ? "#1f4e3d" : "#fff",
+              color: presetKey === p.key ? "#fff" : "#222",
+              cursor: "pointer",
+              fontWeight: 500,
+              fontSize: 13,
+            }}
+          >
+            {p.name}
+          </button>
+        ))}
+      </div>
+      {(() => {
+        const p = PRESETS.find((x) => x.key === presetKey);
+        if (!p) return null;
+        return (
+          <div style={{ fontSize: 13, color: "#444", lineHeight: 1.5, padding: "8px 12px", background: "#f6f4ee", border: "1px solid #ece8dd", borderRadius: 6, marginTop: 6 }}>
+            {p.blurb}
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+// ============================================================
+// Editable LP problem editor
+// ============================================================
+function ProblemEditor({ c, A, b, setC, setA, setB }) {
+  function setCi(i, v) {
+    const c2 = [...c]; c2[i] = v; setC(c2);
+  }
+  function setAij(i, j, v) {
+    const A2 = A.map((r) => [...r]); A2[i][j] = v; setA(A2);
+  }
+  function setBi(i, v) {
+    const b2 = [...b]; b2[i] = v; setB(b2);
+  }
+  function addVar() { setC([...c, 0]); setA(A.map((r) => [...r, 0])); }
+  function removeVar() { if (c.length <= 1) return; setC(c.slice(0, -1)); setA(A.map((r) => r.slice(0, -1))); }
+  function addCons() { setA([...A, Array(c.length).fill(0)]); setB([...b, 0]); }
+  function removeCons() { if (A.length <= 1) return; setA(A.slice(0, -1)); setB(b.slice(0, -1)); }
+  const n = c.length;
+  return (
+    <div style={{ background: "#f6f4ee", border: "1px solid #ece8dd", borderRadius: 8, padding: 14, marginBottom: 14 }}>
+      <div style={{ fontFamily: "monospace", fontSize: 11, color: "#666", letterSpacing: "0.12em", marginBottom: 8, textTransform: "uppercase" }}>
+        Edit the LP — max cᵀx s.t. Ax ≤ b, x ≥ 0
+      </div>
+      <table style={{ borderCollapse: "collapse", fontFamily: "monospace", fontSize: 13 }}>
+        <thead>
+          <tr>
+            <td></td>
+            {Array.from({ length: n }, (_, j) => (
+              <th key={j} style={{ padding: "4px 6px", fontSize: 12, color: "#666" }}>x<sub>{j + 1}</sub></th>
+            ))}
+            <th></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={{ padding: "4px 8px", fontWeight: 700, color: "#555" }}>c</td>
+            {c.map((v, j) => (
+              <td key={j}><NumIn value={v} onChange={(x) => setCi(j, x)} /></td>
+            ))}
+            <td colSpan={2} style={{ paddingLeft: 10, color: "#888", fontSize: 12 }}>(objective coefficients)</td>
+          </tr>
+          {A.map((row, i) => (
+            <tr key={i}>
+              <td style={{ padding: "4px 8px", fontWeight: 700, color: "#555" }}>R<sub>{i + 1}</sub></td>
+              {row.map((v, j) => (
+                <td key={j}><NumIn value={v} onChange={(x) => setAij(i, j, x)} /></td>
+              ))}
+              <td style={{ textAlign: "center", padding: "0 6px", color: "#666" }}>≤</td>
+              <td><NumIn value={b[i]} onChange={(x) => setBi(i, x)} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button onClick={addVar} style={btnSmall}>+ variable</button>
+        <button onClick={removeVar} style={btnSmall}>− variable</button>
+        <button onClick={addCons} style={btnSmall}>+ constraint</button>
+        <button onClick={removeCons} style={btnSmall}>− constraint</button>
+      </div>
+    </div>
+  );
+}
+function NumIn({ value, onChange }) {
+  return (
+    <input
+      type="number"
+      value={value}
+      step="any"
+      onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+      style={{
+        width: 60, padding: "4px 6px", border: "1px solid #ccc", borderRadius: 4,
+        fontFamily: "monospace", fontSize: 13, textAlign: "right",
+      }}
+    />
+  );
+}
+const btnSmall = {
+  display: "inline-flex", alignItems: "center", gap: 6,
+  padding: "4px 8px", borderRadius: 6, border: "1px solid #ccc",
+  background: "#f7f7f7", cursor: "pointer", fontWeight: 500, fontSize: 12,
+};
+
+// ============================================================
+// Formula panel — shows LP → standard form (slacks) → tableau
+// ============================================================
+function FormulaPanel({ c, A, b, n, m }) {
+  // Build LP TeX
+  const objTex = c.map((v, j) => `${j === 0 ? (v < 0 ? "-" : "") : (v < 0 ? "-" : "+")}${Math.abs(v)}\\, x_${j + 1}`).join("");
+  const consTex = A.map((row, i) => {
+    const lhs = row.map((v, j) => `${j === 0 ? (v < 0 ? "-" : "") : (v < 0 ? "-" : "+")}${Math.abs(v)}\\, x_${j + 1}`).join("");
+    return `& ${lhs} \\;\\leq\\; ${b[i]} \\\\`;
+  }).join("");
+  const stdConsTex = A.map((row, i) => {
+    const lhs = row.map((v, j) => `${j === 0 ? (v < 0 ? "-" : "") : (v < 0 ? "-" : "+")}${Math.abs(v)}\\, x_${j + 1}`).join("");
+    return `& ${lhs} + s_${i + 1} \\;=\\; ${b[i]} \\\\`;
+  }).join("");
+  return (
+    <div style={{ marginBottom: 16, padding: 14, background: "#fafafa", border: "1px solid #ddd", borderRadius: 8 }}>
+      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>
+        From LP to tableau — what each row of the table represents
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 18, alignItems: "flex-start" }}>
+        <div>
+          <div style={{ fontSize: 11, fontFamily: "monospace", color: "#888", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 4 }}>1. Original LP</div>
+          <Tex block>{`\\begin{aligned}\\max\\;\\; & ${objTex} \\\\ \\text{s.t.}\\;\\; ${consTex} & x_1, \\ldots, x_${n} \\;\\geq\\; 0 \\end{aligned}`}</Tex>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, fontFamily: "monospace", color: "#888", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 4 }}>2. Standard form (add slacks)</div>
+          <Tex block>{`\\begin{aligned}\\max\\;\\; & z = ${objTex} \\\\ \\text{s.t.}\\;\\; ${stdConsTex} & x_j, s_i \\;\\geq\\; 0 \\end{aligned}`}</Tex>
+          <div style={{ fontSize: 12, color: "#555", marginTop: 4 }}>
+            Each ≤-constraint gets a slack <Tex>{`s_i \\geq 0`}</Tex>. The slack measures how far the LHS is from the RHS — zero ⇔ binding.
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, fontFamily: "monospace", color: "#888", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 4 }}>3. Tableau structure</div>
+          <Tex block>{`\\begin{array}{c|${"c".repeat(n + m)}|c} \\text{basis} & ${Array.from({length: n}, (_, j) => `x_${j+1}`).join(" & ")} & ${Array.from({length: m}, (_, j) => `s_${j+1}`).join(" & ")} & b \\\\ \\hline z & ${Array.from({length: n}, (_, j) => `-c_${j+1}`).join(" & ")} & ${"0 & ".repeat(m).slice(0, -3)} & 0 \\\\ \\hline s_1 & ${Array.from({length: n}, () => "*").join(" & ")} & ${Array.from({length: m}, (_, j) => j === 0 ? "1" : "0").join(" & ")} & b_1 \\\\ \\vdots \\end{array}`}</Tex>
+          <div style={{ fontSize: 12, color: "#555", marginTop: 4, lineHeight: 1.5 }}>
+            <b>z-row</b> (top): negative objective coefficients on x-columns; zeros on slack columns; objective value on right. <b>Constraint rows</b>: original A on x-columns; identity on slack columns; b on right. The <b>basis</b> column lists which variables currently take value &gt; 0 (initially the slacks).
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // Tableau view
 // ============================================================
 function Tableau({ T, basis, n, m, hoverCol, onColumnClick, onRowClick, optimal, suggestedCol, suggestedRow, practiceMode }) {
@@ -373,6 +709,26 @@ function Tableau({ T, basis, n, m, hoverCol, onColumnClick, onRowClick, optimal,
           </tr>
         </thead>
         <tbody>
+          <tr style={{ background: "#fff8e1" }}>
+            <td style={{ ...tdLabel, borderBottom: "2px solid #444" }}>z</td>
+            {Array.from({ length: n + m }, (_, j) => (
+              <td
+                key={j}
+                style={{
+                  ...td,
+                  borderBottom: "2px solid #444",
+                  color: rcosts[j] < -1e-9 ? "#c8311c" : "#222",
+                  fontWeight: rcosts[j] < -1e-9 ? 700 : 400,
+                }}
+              >
+                {fmt(rcosts[j])}
+              </td>
+            ))}
+            <td style={{ ...td, borderBottom: "2px solid #444", fontWeight: 700 }}>
+              {fmt(T[m][totalCols - 1])}
+            </td>
+            {hoverCol !== null && <td style={{ ...td, borderBottom: "2px solid #444" }}></td>}
+          </tr>
           {Array.from({ length: m }, (_, i) => {
             const r = ratioInfo?.ratios[i];
             const eligible = r && r.ok;
@@ -381,10 +737,10 @@ function Tableau({ T, basis, n, m, hoverCol, onColumnClick, onRowClick, optimal,
             return (
               <tr
                 key={i}
-                onClick={() => eligible && onRowClick(i)}
+                onClick={() => onRowClick(i)}
                 style={{
                   background: rowBg,
-                  cursor: eligible ? "pointer" : "default",
+                  cursor: hoverCol !== null ? "pointer" : "default",
                 }}
               >
                 <td style={tdLabel}>{variableLabel(basis[i], n)}</td>
@@ -414,22 +770,6 @@ function Tableau({ T, basis, n, m, hoverCol, onColumnClick, onRowClick, optimal,
               </tr>
             );
           })}
-          <tr style={{ borderTop: "2px solid #444" }}>
-            <td style={tdLabel}>z</td>
-            {Array.from({ length: n + m }, (_, j) => (
-              <td
-                key={j}
-                style={{
-                  ...td,
-                  color: rcosts[j] < -1e-9 ? "#c8311c" : "#222",
-                  fontWeight: rcosts[j] < -1e-9 ? 700 : 400,
-                }}
-              >
-                {fmt(rcosts[j])}
-              </td>
-            ))}
-            <td style={{ ...td, fontWeight: 700 }}>{fmt(T[m][totalCols - 1])}</td>
-          </tr>
         </tbody>
       </table>
       <div style={{ marginTop: 8, fontSize: 12, color: "#555" }}>

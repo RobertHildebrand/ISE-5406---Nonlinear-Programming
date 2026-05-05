@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
 import { Tex } from "./math.jsx";
 
@@ -21,14 +21,53 @@ import { Tex } from "./math.jsx";
    ============================================================ */
 
 // ============================================================
-// Default LP
+// Preset LPs — give a few different flavors of sensitivity
 // ============================================================
-const DEFAULT_C = [3, 5];
-const DEFAULT_A = [
-  [2, 1],
-  [1, 3],
+const PRESETS = [
+  {
+    key: "wood_labor",
+    name: "Wood & Labor (both vars basic)",
+    blurb:
+      "The classic textbook LP. Both decision variables x₁ and x₂ are basic at the optimum, both constraints bind. All four sensitivity questions exercise the BASIC-variable case for c_j and the standard ratio test for b_i.",
+    c: [3, 5],
+    A: [[2, 1], [1, 3]],
+    b: [8, 6],
+  },
+  {
+    key: "x2_nonbasic",
+    name: "x₂ non-basic at optimum",
+    blurb:
+      "By making x₂'s coefficient small, the optimum sits at (4, 0): only x₁ is basic. The Δc₂ derivation now uses the NON-BASIC formula (one-sided bound from a single reduced cost), while Δc₁ still uses the basic-variable ratio test.",
+    c: [4, 1],
+    A: [[2, 1], [1, 1]],
+    b: [8, 5],
+  },
+  {
+    key: "three_vars",
+    name: "3 variables, 2 constraints",
+    blurb:
+      "A three-variable LP. At the optimum some original variables enter the basis and one stays non-basic — sensitivity derivation must do the full ratio test over more non-basic columns.",
+    c: [6, 8, 5],
+    A: [
+      [4, 2, 1],
+      [2, 5, 3],
+    ],
+    b: [32, 30],
+  },
+  {
+    key: "lazy_constraint",
+    name: "One constraint not binding",
+    blurb:
+      "The second constraint has lots of slack — its slack variable stays in the basis at optimum. This means π₂ = 0 (no shadow price), and Δb₂ has a wide range (the basis doesn't care until b₂ tightens enough to bind).",
+    c: [3, 2],
+    A: [[2, 1], [1, 4]],
+    b: [10, 20],
+  },
 ];
-const DEFAULT_B = [8, 6];
+
+const DEFAULT_C = PRESETS[0].c;
+const DEFAULT_A = PRESETS[0].A;
+const DEFAULT_B = PRESETS[0].b;
 
 // ============================================================
 // Internal mini-simplex (max c^T x, A x <= b, x >= 0)
@@ -204,11 +243,23 @@ function bRange(T, basis, n, m, i) {
 // Main component
 // ============================================================
 export default function SensitivityWalkthroughDemo() {
+  const [presetKey, setPresetKey] = useState(PRESETS[0].key);
   const [c, setC] = useState(DEFAULT_C);
   const [A, setA] = useState(DEFAULT_A);
   const [b, setB] = useState(DEFAULT_B);
 
+  function loadPreset(key) {
+    const p = PRESETS.find((x) => x.key === key);
+    if (!p) return;
+    setPresetKey(key);
+    setC([...p.c]);
+    setA(p.A.map((r) => [...r]));
+    setB([...p.b]);
+  }
+
   const opt = useMemo(() => solveSimplex(c, A, b), [c, A, b]);
+
+  const preset = PRESETS.find((x) => x.key === presetKey);
 
   if (opt.unbounded) {
     return (
@@ -219,10 +270,19 @@ export default function SensitivityWalkthroughDemo() {
     );
   }
 
-  return <Inner c={c} A={A} b={b} setC={setC} setA={setA} setB={setB} opt={opt} />;
+  return (
+    <Inner
+      c={c} A={A} b={b}
+      setC={setC} setA={setA} setB={setB}
+      opt={opt}
+      preset={preset}
+      presetKey={presetKey}
+      loadPreset={loadPreset}
+    />
+  );
 }
 
-function Inner({ c, A, b, setC, setA, setB, opt }) {
+function Inner({ c, A, b, setC, setA, setB, opt, preset, presetKey, loadPreset }) {
   const { T, basis, n, m } = opt;
 
   // Tabs: which target to walk through
@@ -231,22 +291,39 @@ function Inner({ c, A, b, setC, setA, setB, opt }) {
     ...b.map((_, i) => ({ kind: "b", index: i, label: `Δb_${i + 1}` })),
   ];
   const [tab, setTab] = useState(0);
+  // Reset tab when preset changes (new dimensions)
+  useEffect(() => { setTab(0); }, [presetKey]);
+  // Clamp tab if c or b shrinks
+  useEffect(() => {
+    if (tab >= c.length + b.length) setTab(0);
+  }, [tab, c.length, b.length]);
+
+  // Compute the highlight set for the current target — passed to OptimalTableau.
+  const highlight = useMemo(
+    () => computeHighlight(targets[tab], T, basis, n, m),
+    [tab, T, basis, n, m, targets]
+  );
 
   return (
     <div style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 24px 80px" }}>
       <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 4 }}>
         Sensitivity Analysis — Step-by-Step Derivation
       </h1>
-      <p style={{ color: "#666", marginBottom: 18, maxWidth: 880 }}>
+      <p style={{ color: "#666", marginBottom: 14, maxWidth: 880 }}>
         Given an LP at its optimal tableau, work out the allowable ranges for
         each objective coefficient and each right-hand-side. Every step is
         written explicitly in algebraic form — including the ratio tests that
-        produce each bound. Edit the LP and watch the derivations regenerate.
+        produce each bound. Edit the LP, switch presets, or pick which
+        coefficient to perturb.
       </p>
+
+      <GoalCallout />
+
+      <PresetPicker presetKey={presetKey} loadPreset={loadPreset} preset={preset} />
 
       <ProblemEditor c={c} A={A} b={b} setC={setC} setA={setA} setB={setB} />
 
-      <OptimalTableau T={T} basis={basis} n={n} m={m} />
+      <OptimalTableau T={T} basis={basis} n={n} m={m} highlight={highlight} />
 
       <div style={{ display: "flex", gap: 6, margin: "16px 0 12px 0", flexWrap: "wrap" }}>
         {targets.map((t, i) => (
@@ -260,9 +337,121 @@ function Inner({ c, A, b, setC, setA, setB, opt }) {
         ))}
       </div>
 
+      <HighlightLegend highlight={highlight} />
+
       <Walkthrough target={targets[tab]} T={T} basis={basis} n={n} m={m} c={c} b={b} />
 
       <Reference />
+    </div>
+  );
+}
+
+// Goal callout: emphasize what sensitivity analysis is FOR
+function GoalCallout() {
+  return (
+    <div
+      style={{
+        padding: "14px 18px",
+        background: "#e8f5e9",
+        border: "2px solid #1f4e3d",
+        borderRadius: 10,
+        marginBottom: 16,
+      }}
+    >
+      <div style={{ fontSize: 11, fontFamily: "monospace", letterSpacing: "0.18em", color: "#1f4e3d", textTransform: "uppercase", marginBottom: 6 }}>
+        the goal
+      </div>
+      <div style={{ fontSize: 15, lineHeight: 1.55, color: "#1a3d2e" }}>
+        Find <b>how much each coefficient (objective <Tex>{`c_j`}</Tex> or RHS <Tex>{`b_i`}</Tex>) can change</b> while the <b>current optimal basis stays optimal</b>.
+        Inside that range, the same set of basic variables remains the optimum — only their <i>values</i>{" "}
+        and the <i>objective</i> shift linearly. Outside, a different basis takes over and a new pivot is needed.
+      </div>
+    </div>
+  );
+}
+
+function PresetPicker({ presetKey, loadPreset, preset }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
+        {PRESETS.map((p) => (
+          <button
+            key={p.key}
+            onClick={() => loadPreset(p.key)}
+            style={{ ...tabBtn, ...(p.key === presetKey ? tabBtnActive : {}) }}
+          >
+            {p.name}
+          </button>
+        ))}
+      </div>
+      {preset && (
+        <div style={{ fontSize: 13, color: "#444", lineHeight: 1.5, padding: "8px 12px", background: "#f6f4ee", border: "1px solid #ece8dd", borderRadius: 6 }}>
+          <b>{preset.name}.</b> {preset.blurb}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// Compute which cells of the optimal tableau are relevant
+// for the current sensitivity question
+// ============================================================
+function computeHighlight(target, T, basis, n, m) {
+  if (!target) return { rows: [], cols: [], cells: [], legend: "" };
+
+  if (target.kind === "c") {
+    const j = target.index;
+    if (basis.includes(j)) {
+      // basic variable — highlight the basic row + every non-basic column
+      const k = basis.indexOf(j);
+      const nonBasicCols = [];
+      for (let q = 0; q < n + m; q++) if (!basis.includes(q)) nonBasicCols.push(q);
+      // The cells we actually use are (k, q) for each non-basic q, plus z-row entries z̄_q
+      const cells = nonBasicCols.flatMap((q) => [{ row: k, col: q, kind: "ratio" }, { row: m, col: q, kind: "z" }]);
+      return {
+        rows: [k],
+        cols: nonBasicCols,
+        cells,
+        kind: "c-basic",
+        legend: `For Δc_${j + 1} (basic, in row ${k + 1}): we use row ${k + 1} of the tableau (the row where x_${j + 1} is basic) and the z-row entries on every non-basic column.`,
+      };
+    } else {
+      // non-basic variable — only the z-row entry of column j matters
+      return {
+        rows: [],
+        cols: [j],
+        cells: [{ row: m, col: j, kind: "z" }],
+        kind: "c-nonbasic",
+        legend: `For Δc_${j + 1} (non-basic): only the z-row entry of column ${j < n ? `x_${j + 1}` : `s_${j - n + 1}`} matters — it gives the one-sided bound directly.`,
+      };
+    }
+  }
+  // b_i
+  const i = target.index;
+  const slackCol = n + i;
+  return {
+    rows: Array.from({ length: m }, (_, k) => k),
+    cols: [slackCol, n + m], // slack column and RHS column
+    cells: Array.from({ length: m }, (_, k) => ({ row: k, col: slackCol, kind: "ratio" })),
+    kind: "b",
+    legend: `For Δb_${i + 1}: we use the slack column for constraint ${i + 1} (column s_${i + 1}, which holds the i-th column of B⁻¹) and the RHS column. Each basic row contributes a ratio-test inequality.`,
+  };
+}
+
+function HighlightLegend({ highlight }) {
+  if (!highlight || !highlight.legend) return null;
+  return (
+    <div style={{
+      padding: "8px 12px",
+      background: "#fff8e1",
+      border: "1px solid #f5d68d",
+      borderRadius: 6,
+      marginBottom: 10,
+      fontSize: 13,
+      lineHeight: 1.5,
+    }}>
+      <b style={{ color: "#7a5a00" }}>Tableau highlight:</b> {highlight.legend}
     </div>
   );
 }
@@ -343,7 +532,24 @@ function NumInput({ value, onChange }) {
 // ============================================================
 // Optimal tableau view
 // ============================================================
-function OptimalTableau({ T, basis, n, m }) {
+function OptimalTableau({ T, basis, n, m, highlight }) {
+  const hRows = new Set(highlight?.rows || []);
+  const hCols = new Set(highlight?.cols || []);
+  const cellMap = new Map();
+  (highlight?.cells || []).forEach((c) => cellMap.set(`${c.row},${c.col}`, c.kind));
+
+  function cellStyle(i, j) {
+    const isHRow = hRows.has(i);
+    const isHCol = hCols.has(j);
+    const cellKind = cellMap.get(`${i},${j}`);
+    if (cellKind === "z") return { background: "#fff4c8", outline: "2px solid #c8311c" };
+    if (cellKind === "ratio") return { background: "#fff4c8", outline: "2px solid #c8311c" };
+    if (isHRow && isHCol) return { background: "#fde8a0" };
+    if (isHRow) return { background: "#fff8d8" };
+    if (isHCol) return { background: "#fff8d8" };
+    return {};
+  }
+
   return (
     <div style={panel}>
       <div style={{ fontFamily: "monospace", fontSize: 10, color: "#888", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 8 }}>
@@ -354,29 +560,39 @@ function OptimalTableau({ T, basis, n, m }) {
           <tr>
             <th style={th}>basis</th>
             {Array.from({ length: n + m }, (_, j) => (
-              <th key={j} style={th}>{colLabelText(j, n, m)}</th>
+              <th key={j} style={{ ...th, background: hCols.has(j) ? "#fde8a0" : "#f0f0f0" }}>
+                {colLabelText(j, n, m)}
+              </th>
             ))}
-            <th style={th}>RHS</th>
+            <th style={{ ...th, background: hCols.has(n + m) ? "#fde8a0" : "#e7e7e7" }}>RHS</th>
           </tr>
         </thead>
         <tbody>
           {Array.from({ length: m }, (_, i) => (
             <tr key={i}>
-              <td style={tdLab}>{colLabelText(basis[i], n, m)}</td>
+              <td style={{ ...tdLab, background: hRows.has(i) ? "#fff8d8" : "transparent" }}>
+                {colLabelText(basis[i], n, m)}
+              </td>
               {Array.from({ length: n + m }, (_, j) => (
-                <td key={j} style={td}>{fmtNum(T[i][j])}</td>
+                <td key={j} style={{ ...td, ...cellStyle(i, j) }}>{fmtNum(T[i][j])}</td>
               ))}
-              <td style={{ ...td, fontWeight: 700 }}>{fmtNum(T[i][n + m])}</td>
+              <td style={{ ...td, fontWeight: 700, ...cellStyle(i, n + m) }}>{fmtNum(T[i][n + m])}</td>
             </tr>
           ))}
           <tr style={{ borderTop: "2px solid #444" }}>
-            <td style={tdLab}>z</td>
+            <td style={{ ...tdLab, background: hRows.has(m) ? "#fff8d8" : "transparent" }}>z</td>
             {Array.from({ length: n + m }, (_, j) => (
-              <td key={j} style={{ ...td, color: T[m][j] > 1e-9 ? "#0b3da0" : "#555" }}>
+              <td key={j} style={{
+                ...td,
+                color: T[m][j] > 1e-9 ? "#0b3da0" : "#555",
+                ...cellStyle(m, j),
+              }}>
                 {fmtNum(T[m][j])}
               </td>
             ))}
-            <td style={{ ...td, fontWeight: 700, color: "#c8311c" }}>{fmtNum(T[m][n + m])}</td>
+            <td style={{ ...td, fontWeight: 700, color: "#c8311c", ...cellStyle(m, n + m) }}>
+              {fmtNum(T[m][n + m])}
+            </td>
           </tr>
         </tbody>
       </table>
@@ -476,9 +692,7 @@ function BasicCWalk({ T, basis, n, m, c, j }) {
           {`\\Delta c_${j + 1} \\in ${fmtRange(result.lo, result.hi)}\\quad\\Longleftrightarrow\\quad c_${j + 1} \\in [\\,${fmtFrac(c[j] + (result.lo === -Infinity ? 0 : result.lo))}\\,,\\;${fmtFrac(c[j] + (result.hi === Infinity ? 0 : result.hi))}\\,]\\text{ (centered at }${fmtFrac(c[j])}\\text{)}`}
         </Tex>
         <div style={{ fontSize: 12, color: "#555", marginTop: 4 }}>
-          Within this range, the current basis (and therefore the current
-          optimal solution <Tex>{`x^*`}</Tex>) stays optimal — although the
-          objective value changes linearly with Δ.
+          <b>Goal achieved:</b> within this range, the <i>current optimal basis</i> stays optimal — i.e. the same set of basic variables wins. The values of <Tex>{`x^*`}</Tex> stay the same (because basic-var <Tex>{`c_j`}</Tex> doesn't enter the RHS computation), and the objective shifts linearly with Δ. Outside the range, a different basis takes over and you'd need to re-pivot.
         </div>
       </Result>
     </div>
@@ -528,8 +742,8 @@ function NonBasicCWalk({ T, basis, n, m, c, j }) {
           {`\\Delta c_${j + 1} \\in ${fmtRange(r.lo, r.hi)} \\quad\\Longleftrightarrow\\quad c_${j + 1} \\in (-\\infty,\\; ${fmtFrac(c[j] + r.zj)}\\,]\\text{ (centered at }${fmtFrac(c[j])}\\text{)}`}
         </Tex>
         <div style={{ fontSize: 12, color: "#555", marginTop: 4 }}>
-          Increase <Tex>{`c_${j + 1}`}</Tex> beyond <Tex>{`c_${j + 1} + \\bar z_${j + 1}`}</Tex>{" "}
-          and <Tex>{`x_${j + 1}`}</Tex> would enter the basis.
+          <b>Goal achieved:</b> within this range the current basis stays optimal — <Tex>{`x_${j + 1}`}</Tex> remains non-basic and every other variable's value is unchanged. Increase <Tex>{`c_${j + 1}`}</Tex> beyond <Tex>{`c_${j + 1} + \\bar z_${j + 1}`}</Tex>{" "}
+          and <Tex>{`x_${j + 1}`}</Tex> would enter the basis (re-pivot required).
         </div>
       </Result>
     </div>
@@ -608,11 +822,12 @@ function BWalk({ T, basis, n, m, b, i }) {
           {`\\Delta b_${i + 1} \\in ${fmtRange(r.lo, r.hi)}\\quad\\Longleftrightarrow\\quad b_${i + 1} \\in [\\,${fmtFrac(b[i] + (r.lo === -Infinity ? 0 : r.lo))}\\,,\\;${fmtFrac(b[i] + (r.hi === Infinity ? 0 : r.hi))}\\,]\\text{ (centered at }${fmtFrac(b[i])}\\text{)}`}
         </Tex>
         <div style={{ fontSize: 12, color: "#555", marginTop: 4 }}>
-          Within this range the current basis stays feasible, so the same
-          set of basic variables remains the optimum (their VALUES change
-          linearly with Δ; the optimal cost changes at rate{" "}
+          <b>Goal achieved:</b> within this range the current basis stays feasible, so the same
+          set of basic variables remains the optimum. Their <i>values</i> shift linearly with Δ;
+          the optimal cost changes at rate{" "}
           <Tex>{`\\pi_${i + 1} = ${fmtFrac(T[m][r.slackCol])}`}</Tex>{" "}
-          per unit of Δ — that's the shadow price).
+          per unit of Δ — that's the shadow price. Outside the range the basis becomes
+          infeasible and a re-pivot is needed.
         </div>
       </Result>
     </div>

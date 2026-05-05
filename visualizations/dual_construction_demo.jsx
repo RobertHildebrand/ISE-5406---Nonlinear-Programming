@@ -390,7 +390,7 @@ function PrimalPanel({ c, A, b, primalSense, consTypes, varForms, stage }) {
     <div style={panel}>
       <div style={panelTitle}>Primal</div>
       <Tex block>
-        {`\\begin{aligned}\\${primalSense}\\quad & \\sum_{j=1}^{${n}} c_j x_j \\\\ \\text{s.t.}\\quad & \\sum_{j=1}^{${n}} a_{ij} x_j \\;\\${consToTex(consTypes[0] || "<=")} \\; b_i, \\quad i=1,\\dots,${m} \\\\ & x_j \\;\\${varFormToTex(varForms[0] || ">=0")},\\quad j=1,\\dots,${n} \\end{aligned}`}
+        {`\\begin{aligned}\\${primalSense}\\quad & \\sum_{j=1}^{${n}} c_j x_j \\\\ \\text{s.t.}\\quad & \\sum_{j=1}^{${n}} a_{ij} x_j \\;${consToTex(consTypes[0] || "<=")}\\; b_i, \\quad i=1,\\dots,${m} \\\\ & x_j \\;${varFormToTex(varForms[0] || ">=0")},\\quad j=1,\\dots,${n} \\end{aligned}`}
       </Tex>
       <div style={{ marginTop: 10, fontSize: 12, color: "#777", fontFamily: "monospace" }}>
         Concrete instance:
@@ -429,10 +429,10 @@ function signTerm(v, first) {
   }
 }
 function consToTex(t) {
-  return t === "<=" ? "\\le" : t === ">=" ? "\\ge" : "=";
+  return t === "<=" ? "\\leq" : t === ">=" ? "\\geq" : "=";
 }
 function varFormToTex(f) {
-  return f === ">=0" ? "\\ge 0" : f === "<=0" ? "\\le 0" : "\\text{ free}";
+  return f === ">=0" ? "\\geq 0" : f === "<=0" ? "\\leq 0" : "\\text{ free}";
 }
 
 // ============================================================

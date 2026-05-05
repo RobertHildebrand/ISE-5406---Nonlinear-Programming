@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Play, Pause, RotateCcw, StepForward, CheckCircle2 } from "lucide-react";
+import { CopyCodeButton, DownloadNotebookButton } from "./code_panel_utils.jsx";
 
 /* ============================================================
    SGD / MOMENTUM / ADAM — IN-CLASS CODE STEPPER
@@ -521,7 +522,8 @@ function CodePanel({ codeLines, highlightedLine }) {
         color: "#e8e2d4",
         padding: "12px 0",
         borderRadius: 8,
-        overflow: "hidden",
+        overflowX: "auto",
+        overflowY: "hidden",
         lineHeight: `${lineHeight}px`,
         minHeight: codeLines.length * lineHeight + 24,
       }}
@@ -538,6 +540,8 @@ function CodePanel({ codeLines, highlightedLine }) {
               padding: "0 14px",
               background: active ? "#3b3526" : "transparent",
               borderLeft: active ? "3px solid #f5a524" : "3px solid transparent",
+              width: "max-content",
+              minWidth: "100%",
             }}
           >
             <span
@@ -826,6 +830,15 @@ export default function SGDAdamTutorial() {
       >
         {/* LEFT: code + narration */}
         <div>
+          <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
+            <CopyCodeButton code={code.slice(1).join("\n")} />
+            <DownloadNotebookButton
+              code={code.slice(1).join("\n")}
+              filename="sgd_adam_demo.ipynb"
+              title="SGD / Momentum / Adam"
+              description="Code stepper for first-order optimizers."
+            />
+          </div>
           <CodePanel codeLines={code} highlightedLine={ev?.line || 1} />
 
           <div style={narrationBox}>

@@ -680,7 +680,8 @@ const S = {
     background: "#fdfdfd",
     border: "1px solid #e1e4e8",
     borderRadius: 8,
-    overflow: "hidden",
+    overflowX: "auto",
+    overflowY: "hidden",
     boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
   },
   codeHeader: {
@@ -705,6 +706,8 @@ const S = {
     alignItems: "flex-start",
     padding: "2px 0",
     transition: "background 120ms linear",
+    width: "max-content",
+    minWidth: "100%",
   },
   gutter: {
     flexShrink: 0,

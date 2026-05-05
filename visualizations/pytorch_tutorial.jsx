@@ -7,6 +7,7 @@ import {
   Terminal,
   Package,
 } from "lucide-react";
+import { CopyCodeButton, DownloadNotebookButton } from "./code_panel_utils.jsx";
 
 /* ============================================================
    PYTORCH — CODE STEPPER TUTORIAL
@@ -461,6 +462,15 @@ export default function PyTorchTutorial() {
         }}
       >
         <div>
+          <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
+            <CopyCodeButton code={problem.code.slice(1).join("\n")} />
+            <DownloadNotebookButton
+              code={problem.code.slice(1).join("\n")}
+              filename={`pytorch_${problem.key || "demo"}.ipynb`}
+              title={problem.name}
+              description={problem.blurb || ""}
+            />
+          </div>
           <CodePanel codeLines={problem.code} highlightedLine={ev?.line || 1} />
 
           <div style={narrationBox}>
@@ -1012,7 +1022,8 @@ function CodePanel({ codeLines, highlightedLine }) {
         color: "#e8e2d4",
         padding: "12px 0",
         borderRadius: 8,
-        overflow: "hidden",
+        overflowX: "auto",
+        overflowY: "hidden",
         lineHeight: `${lineHeight}px`,
         minHeight: codeLines.length * lineHeight + 24,
       }}
@@ -1031,6 +1042,8 @@ function CodePanel({ codeLines, highlightedLine }) {
               background: active ? "#3b3526" : "transparent",
               borderLeft: active ? "3px solid #f5a524" : "3px solid transparent",
               minHeight: lineHeight,
+              width: "max-content",
+              minWidth: "100%",
             }}
           >
             <span style={{ width: 22, color: active ? "#f5a524" : "#7f7864", fontSize: 11, userSelect: "none" }}>

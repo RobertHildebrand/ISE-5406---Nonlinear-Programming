@@ -9,6 +9,7 @@ import {
   FileText,
 } from "lucide-react";
 import { CopyCodeButton, DownloadNotebookButton } from "./code_panel_utils.jsx";
+import { Tex } from "./math.jsx";
 
 /* ============================================================
    AMPL + amplpy — CODE STEPPER TUTORIAL
@@ -35,6 +36,7 @@ const PROB_LP_SIMPLE = {
   blurb:
     "Maximize profit from two products. Each product uses two resources (wood, labor). Two ≤ constraints, two non-negativity bounds — the textbook 'first LP'.",
   formula: "max  3 x + 5 y    s.t.   2x + y ≤ 8,   x + 3y ≤ 6,   x, y ≥ 0",
+  mathFormula: String.raw`\begin{aligned}\max\;\; & 3x + 5y \\ \text{s.t.}\;\; & 2x + y \le 8 \\ & x + 3y \le 6 \\ & x, y \ge 0 \end{aligned}`,
   code: [
     null,
     "from amplpy import AMPL",
@@ -92,6 +94,7 @@ const PROB_IP_SIMPLE = {
     "Pick a subset of items to maximize total value subject to a weight capacity. Binary variables, one knapsack constraint — the classic 'first IP'.",
   formula:
     "max  Σᵢ vᵢ xᵢ    s.t.   Σᵢ wᵢ xᵢ ≤ W,    xᵢ ∈ {0, 1}",
+  mathFormula: String.raw`\begin{aligned}\max\;\; & \sum_{i \in I} v_i\, x_i \\ \text{s.t.}\;\; & \sum_{i \in I} w_i\, x_i \;\le\; W \\ & x_i \in \{0, 1\}, \quad i \in I \end{aligned}`,
   code: [
     null,
     "from amplpy import AMPL",
@@ -185,6 +188,7 @@ const PROB_LP_TRANSPORT = {
     "Three plants ship product to four customers; minimize total shipping cost subject to plant supply and customer demand. Two indexed sets, sums over both — AMPL's bread and butter.",
   formula:
     "min  Σᵢⱼ cᵢⱼ xᵢⱼ    s.t.   Σⱼ xᵢⱼ ≤ supply[i],    Σᵢ xᵢⱼ ≥ demand[j],    xᵢⱼ ≥ 0",
+  mathFormula: String.raw`\begin{aligned}\min\;\; & \sum_{p \in P}\sum_{c \in C} \mathrm{cost}_{p,c}\, x_{p,c} \\ \text{s.t.}\;\; & \sum_{c \in C} x_{p,c} \;\le\; \mathrm{supply}_p, \quad \forall\, p \in P \\ & \sum_{p \in P} x_{p,c} \;\ge\; \mathrm{demand}_c, \quad \forall\, c \in C \\ & x_{p,c} \;\ge\; 0 \end{aligned}`,
   code: [
     null,
     "from amplpy import AMPL",
@@ -299,6 +303,7 @@ const PROB_IP_FACILITY = {
     "Decide which warehouses to OPEN (binary) and how much each opens warehouse should ship to each customer (continuous). Fixed opening costs vs. variable shipping costs. Indexed binaries plus big-M flow constraints.",
   formula:
     "min  Σᵢ fᵢ yᵢ + Σᵢⱼ cᵢⱼ xᵢⱼ\ns.t.   Σⱼ xᵢⱼ ≤ capᵢ · yᵢ   ∀ i\n       Σᵢ xᵢⱼ ≥ demand_j  ∀ j\n       yᵢ ∈ {0, 1},  xᵢⱼ ≥ 0",
+  mathFormula: String.raw`\begin{aligned}\min\;\; & \sum_{i \in S} f_i\, y_i \;+\; \sum_{i \in S}\sum_{j \in C} c_{i,j}\, x_{i,j} \\ \text{s.t.}\;\; & \sum_{j \in C} x_{i,j} \;\le\; \mathrm{cap}_i\, y_i, \quad \forall\, i \in S \\ & \sum_{i \in S} x_{i,j} \;\ge\; d_j, \quad \forall\, j \in C \\ & y_i \in \{0, 1\}, \quad x_{i,j} \ge 0 \end{aligned}`,
   code: [
     null,
     "from amplpy import AMPL",
@@ -426,6 +431,7 @@ const PROB_QP = {
   blurb:
     "Minimize the squared distance from (1, 2) over points with x, y ≥ 0 and x + y ≤ 1. The unconstrained minimum lies outside the feasible set, so the budget constraint binds.",
   formula: "min  (x − 1)² + (y − 2)²    s.t.   x ≥ 0,  y ≥ 0,  x + y ≤ 1",
+  mathFormula: String.raw`\begin{aligned}\min\;\; & (x - 1)^2 + (y - 2)^2 \\ \text{s.t.}\;\; & x + y \le 1 \\ & x, y \ge 0 \end{aligned}`,
   code: [
     null,
     "from amplpy import AMPL",
@@ -478,6 +484,7 @@ const PROB_PORTFOLIO = {
     "Minimize portfolio variance subject to a return floor and budget. Uses AMPL's set + param machinery — the indexing style that makes AMPL famous in textbooks.",
   formula:
     "min  Σᵢ σᵢ² wᵢ²   s.t.   Σᵢ μᵢ wᵢ ≥ 0.08,   Σᵢ wᵢ = 1,   wᵢ ∈ [0, 1]",
+  mathFormula: String.raw`\begin{aligned}\min\;\; & \sum_{a \in A} \sigma_a^2\, w_a^2 \\ \text{s.t.}\;\; & \sum_{a \in A} \mu_a\, w_a \;\ge\; 0.08 \\ & \sum_{a \in A} w_a \;=\; 1 \\ & 0 \le w_a \le 1, \quad \forall\, a \in A \end{aligned}`,
   code: [
     null,
     "from amplpy import AMPL",
@@ -569,6 +576,7 @@ const PROB_HS71 = {
     "The classic NLP benchmark — smooth nonconvex objective, one bilinear inequality, one quadratic equality, four bounded variables. AMPL is the language IPOPT's documentation uses for HS71; this is the canonical encoding.",
   formula:
     "min  x₁·x₄·(x₁+x₂+x₃) + x₃\ns.t.   x₁·x₂·x₃·x₄  ≥ 25\n       x₁² + x₂² + x₃² + x₄² = 40\n       1 ≤ xᵢ ≤ 5    (i = 1,…,4)",
+  mathFormula: String.raw`\begin{aligned}\min\;\; & x_1\,x_4\,(x_1 + x_2 + x_3) + x_3 \\ \text{s.t.}\;\; & x_1\,x_2\,x_3\,x_4 \;\ge\; 25 \\ & x_1^2 + x_2^2 + x_3^2 + x_4^2 \;=\; 40 \\ & 1 \le x_i \le 5, \quad i = 1, \ldots, 4 \end{aligned}`,
   code: [
     null,
     "from amplpy import AMPL",
@@ -765,6 +773,8 @@ export default function AmplpyTutorial() {
   const [running, setRunning] = useState(false);
   const [speed, setSpeed] = useState(700);
   const [showMod, setShowMod] = useState(false);
+  const [wideCode, setWideCode] = useState(false);
+  const [codeFontSize, setCodeFontSize] = useState(13);
 
   useEffect(() => {
     setEvIdx(0);
@@ -827,13 +837,29 @@ export default function AmplpyTutorial() {
         ))}
       </div>
 
-      {/* Problem blurb */}
+      {/* Problem blurb — words on the left, math on the right */}
       <div style={blurbBox}>
-        <div style={{ fontSize: 13, color: "#444", lineHeight: 1.5 }}>
-          {problem.blurb}
-        </div>
-        <div style={{ marginTop: 8, fontFamily: "monospace", fontSize: 12, color: "#1f4e3d", whiteSpace: "pre-wrap" }}>
-          {problem.formula}
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 1.2fr) minmax(280px, 1fr)", gap: 24, alignItems: "center" }}>
+          <div>
+            <div style={{ fontFamily: "monospace", fontSize: 10, letterSpacing: "0.18em", color: "#888", marginBottom: 4, textTransform: "uppercase" }}>
+              the problem in words
+            </div>
+            <div style={{ fontSize: 14, color: "#222", lineHeight: 1.55 }}>
+              {problem.blurb}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontFamily: "monospace", fontSize: 10, letterSpacing: "0.18em", color: "#888", marginBottom: 4, textTransform: "uppercase" }}>
+              the problem in math
+            </div>
+            {problem.mathFormula ? (
+              <Tex block>{problem.mathFormula}</Tex>
+            ) : (
+              <div style={{ fontFamily: "monospace", fontSize: 12, color: "#1f4e3d", whiteSpace: "pre-wrap" }}>
+                {problem.formula}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -859,11 +885,31 @@ export default function AmplpyTutorial() {
           title={problem.name}
           description={problem.blurb + "\n\n```\n" + problem.formula + "\n```"}
         />
-        <span style={{ fontSize: 12, color: "#666" }}>
-          {showMod
-            ? "Same model in textbook AMPL syntax (no Python)."
-            : ""}
-        </span>
+        <button
+          onClick={() => setWideCode((w) => !w)}
+          style={{
+            ...btn,
+            background: wideCode ? "#1f4e3d" : "#f7f7f7",
+            color: wideCode ? "#fff" : "#222",
+            border: wideCode ? "1px solid #1f4e3d" : "1px solid #ccc",
+          }}
+          title="Expand the code panel to full width so long lines stay visible"
+        >
+          {wideCode ? "↤ collapse code" : "↦ expand code"}
+        </button>
+        <label style={{ fontSize: 12, color: "#666", display: "inline-flex", alignItems: "center", gap: 6 }}>
+          font:
+          <input
+            type="range"
+            min={11}
+            max={17}
+            step={1}
+            value={codeFontSize}
+            onChange={(e) => setCodeFontSize(+e.target.value)}
+            style={{ width: 90 }}
+          />
+          <span style={{ fontFamily: "monospace" }}>{codeFontSize}px</span>
+        </label>
       </div>
 
       {showMod && (
@@ -875,17 +921,17 @@ export default function AmplpyTutorial() {
         </div>
       )}
 
-      {/* Two-column layout */}
+      {/* Two-column layout — collapses to one column when 'expand code' is on */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "minmax(420px, 1fr) minmax(420px, 1fr)",
+          gridTemplateColumns: wideCode ? "1fr" : "minmax(420px, 1fr) minmax(420px, 1fr)",
           gap: 22,
           alignItems: "flex-start",
         }}
       >
         <div>
-          <CodePanel codeLines={problem.code} highlightedLine={ev?.line || 1} />
+          <CodePanel codeLines={problem.code} highlightedLine={ev?.line || 1} fontSize={codeFontSize} />
 
           <div style={narrationBox}>
             <div style={{ fontSize: 11, color: "#777", marginBottom: 4, fontFamily: "monospace" }}>
@@ -995,18 +1041,19 @@ python -c "from amplpy import AMPL; a = AMPL(); print(a.option['version'])"`}
 // ============================================================
 // Code panel
 // ============================================================
-function CodePanel({ codeLines, highlightedLine }) {
-  const lineHeight = 22;
+function CodePanel({ codeLines, highlightedLine, fontSize = 13 }) {
+  const lineHeight = Math.round(fontSize * 1.7);
   return (
     <div
       style={{
         fontFamily: "'JetBrains Mono', Menlo, ui-monospace, monospace",
-        fontSize: 13,
+        fontSize,
         background: "#1f1d1a",
         color: "#e8e2d4",
         padding: "12px 0",
         borderRadius: 8,
-        overflow: "hidden",
+        overflowX: "auto",
+        overflowY: "hidden",
         lineHeight: `${lineHeight}px`,
         minHeight: codeLines.length * lineHeight + 24,
       }}
@@ -1025,15 +1072,17 @@ function CodePanel({ codeLines, highlightedLine }) {
               background: active ? "#3b3526" : "transparent",
               borderLeft: active ? "3px solid #f5a524" : "3px solid transparent",
               minHeight: lineHeight,
+              width: "max-content",
+              minWidth: "100%",
             }}
           >
-            <span style={{ width: 22, color: active ? "#f5a524" : "#7f7864", fontSize: 11, userSelect: "none" }}>
+            <span style={{ width: 22, color: active ? "#f5a524" : "#7f7864", fontSize: 11, userSelect: "none", flexShrink: 0 }}>
               {active ? "▶" : ""}
             </span>
-            <span style={{ width: 28, color: "#7f7864", textAlign: "right", marginRight: 12, fontSize: 11, userSelect: "none" }}>
+            <span style={{ width: 28, color: "#7f7864", textAlign: "right", marginRight: 12, fontSize: 11, userSelect: "none", flexShrink: 0 }}>
               {i}
             </span>
-            <span style={{ color: active ? "#fff8e1" : isBlank ? "#7f7864" : "#e8e2d4", whiteSpace: "pre" }}>
+            <span style={{ color: active ? "#fff8e1" : isBlank ? "#7f7864" : "#e8e2d4", whiteSpace: "pre", flexShrink: 0 }}>
               {line || " "}
             </span>
           </div>

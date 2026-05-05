@@ -40,55 +40,38 @@ import AmplpyTutorial from '../amplpy_tutorial.jsx';
 import TableauPivoterDemo from '../tableau_pivoter_demo.jsx';
 import DualConstructionDemo from '../dual_construction_demo.jsx';
 import SensitivityWalkthroughDemo from '../sensitivity_walkthrough_demo.jsx';
+import PythonBasicsTutorial from '../python_basics_tutorial.jsx';
 
-// ---------- Categories (display order) ----------
+// ---------- Categories (display order: LP → IP → NLP → ML → Tutorials) ----------
 const CATEGORIES = [
   {
-    id: 'foundations',
-    title: 'Foundations',
-    blurb: 'Build intuition for what one optimization step actually does.',
-    accent: '#1f4e3d',
+    id: 'lp',
+    title: 'Linear Programming',
+    blurb: 'Simplex, duality, sensitivity. The algorithmic foundation for most of OR — every IP and NLP solver leans on an LP at some point.',
+    accent: '#0b3da0',
   },
   {
-    id: 'first-order',
-    title: 'First-Order Methods',
-    blurb: 'Gradient descent, momentum, Nesterov, RMSProp, Adam — and how to size their steps.',
-    accent: '#1f4e3d',
-  },
-  {
-    id: 'second-order',
-    title: 'Second-Order Methods',
-    blurb: "Newton's method and the local quadratic model.",
-    accent: '#1f4e3d',
-  },
-  {
-    id: 'constrained',
-    title: 'Constrained Optimization',
-    blurb: 'Feasible regions, active sets, KKT conditions, and interior-point methods.',
-    accent: '#d4a017',
-  },
-  {
-    id: 'classification',
-    title: 'Classification & Kernels',
-    blurb: 'Perceptron and SVM with linear, polynomial, and RBF kernels.',
-    accent: '#1f4e3d',
-  },
-  {
-    id: 'neural-nets',
-    title: 'Neural Networks',
-    blurb: 'Forward and backward pass, training, learned vs target.',
-    accent: '#1f4e3d',
-  },
-  {
-    id: 'advanced',
-    title: 'Advanced Topics',
-    blurb: 'Conditional gradient, polynomial / SOS optimization, algebraic methods.',
+    id: 'ip',
+    title: 'Integer Programming',
+    blurb: 'Branch-and-bound, decomposition, scheduling. Combinatorial structure on top of LP — and the algorithms that exploit it.',
     accent: '#7a3da0',
+  },
+  {
+    id: 'nlp',
+    title: 'Nonlinear Programming',
+    blurb: 'Continuous optimization with smooth nonlinear objectives or constraints. From a single gradient step to interior-point and conditional-gradient methods.',
+    accent: '#1f4e3d',
+  },
+  {
+    id: 'ml',
+    title: 'Machine Learning, Networks, & RL',
+    blurb: 'Supervised classification, neural networks, reinforcement learning. Optimization shows up everywhere here — these are the consumer applications.',
+    accent: '#d4a017',
   },
   {
     id: 'tutorials',
     title: 'In-Class Code Steppers',
-    blurb: 'Walk through algorithm code line-by-line for live lecture demonstration.',
+    blurb: 'Walk through algorithm and modeling code line by line for live lecture demonstration. Copy code or download a Jupyter notebook with one click.',
     accent: '#c8311c',
   },
 ];
@@ -97,7 +80,7 @@ const DEMOS = [
   // ── Foundations ────────────────────────────────────────────────
   {
     id: 'step',
-    category: 'foundations',
+    category: 'nlp',
     title: 'Anatomy of a Step',
     description:
       'One optimization iteration in slow motion: gradient, descent direction, step size, and the resulting move.',
@@ -107,7 +90,7 @@ const DEMOS = [
   // ── First-order methods ────────────────────────────────────────
   {
     id: 'optim',
-    category: 'first-order',
+    category: 'nlp',
     title: 'First-Order Methods (2D)',
     description:
       'Compare GD, momentum, Nesterov, RMSProp, Adam on 2D test functions. Watch trajectories on the contour plot.',
@@ -115,7 +98,7 @@ const DEMOS = [
   },
   {
     id: 'optim3d',
-    category: 'first-order',
+    category: 'nlp',
     title: 'First-Order Methods (3D)',
     description:
       'Same methods, but rotate the loss surface and watch trajectories descend in 3D. Tunable start point.',
@@ -123,7 +106,7 @@ const DEMOS = [
   },
   {
     id: 'linesearch',
-    category: 'first-order',
+    category: 'nlp',
     title: 'Line Search (Armijo / Wolfe)',
     description:
       'Slide α along φ(α) = f(x + α·d). See which step sizes satisfy Armijo and strong-Wolfe; animate backtracking.',
@@ -133,7 +116,7 @@ const DEMOS = [
   // ── Second-order ───────────────────────────────────────────────
   {
     id: 'newton',
-    category: 'second-order',
+    category: 'nlp',
     title: 'Newton vs. First-Order',
     description:
       "Newton lands at the local quadratic model's minimum. Compare against gradient descent on the same surface.",
@@ -143,7 +126,7 @@ const DEMOS = [
   // ── Constrained ────────────────────────────────────────────────
   {
     id: 'kkt',
-    category: 'constrained',
+    category: 'nlp',
     title: 'Constrained Optimization & KKT',
     description:
       'Feasible region, active constraints, Lagrange multipliers, and the KKT balance ∇f + Σ λᵢ ∇gᵢ = 0.',
@@ -151,7 +134,7 @@ const DEMOS = [
   },
   {
     id: 'barrier',
-    category: 'constrained',
+    category: 'nlp',
     title: 'Interior Point / Log Barrier',
     description:
       'Sweep the barrier parameter t through LPs, SOCPs, and SDPs. Watch the central path bend through different feasible regions.',
@@ -161,7 +144,7 @@ const DEMOS = [
   // ── Classification & kernels ───────────────────────────────────
   {
     id: 'svm',
-    category: 'classification',
+    category: 'ml',
     title: 'Perceptron & Kernel SVM',
     description:
       'Step through the perceptron algorithm, then train kernel SVMs (linear / polynomial / RBF) with adjustable noise and label flips.',
@@ -171,7 +154,7 @@ const DEMOS = [
   // ── Neural networks ────────────────────────────────────────────
   {
     id: 'nn-demo',
-    category: 'neural-nets',
+    category: 'ml',
     title: 'Neural Networks & Backpropagation',
     description:
       'Three-part walkthrough: forward pass with sliders, training with live loss curve and gradient halos, learned-vs-target heatmaps.',
@@ -179,7 +162,7 @@ const DEMOS = [
   },
   {
     id: 'nn',
-    category: 'neural-nets',
+    category: 'ml',
     title: '8×8 Digit Classifier',
     description:
       'A small NN classifies hand-drawn 8×8 digit patterns. Watch every neuron activate during forward and backward propagation.',
@@ -189,7 +172,7 @@ const DEMOS = [
   // ── Advanced topics ────────────────────────────────────────────
   {
     id: 'lp-solvers',
-    category: 'advanced',
+    category: 'lp',
     title: 'LP Modelers — PuLP / AMPL / Gurobi / CPLEX',
     description:
       "Same production LP, four languages. Tabs to switch; identical numerical answer. Includes API cheat sheet mapping common operations across the four modelers and per-language install notes.",
@@ -197,7 +180,7 @@ const DEMOS = [
   },
   {
     id: 'excel-solver',
-    category: 'advanced',
+    category: 'lp',
     title: 'Excel Solver — Spreadsheet Optimization',
     description:
       "Three problem types laid out as Excel sheets: LP, IP (knapsack), and NLP (curve fit). Each with formula highlighting, Solver dialog mockup, results, plus a SUMPRODUCT/IF/INDEX cheat sheet.",
@@ -205,7 +188,7 @@ const DEMOS = [
   },
   {
     id: 'network-flow',
-    category: 'advanced',
+    category: 'lp',
     title: 'Network Flow — NetworkX & OR-Tools',
     description:
       "One graph, three problems (shortest path, max flow, min-cost flow), two libraries side-by-side. Flow values overlaid on the graph in red; saturation indicated.",
@@ -213,7 +196,7 @@ const DEMOS = [
   },
   {
     id: 'rl',
-    category: 'advanced',
+    category: 'ml',
     title: 'RL — Gridworld (Value / Policy / Q-Learning)',
     description:
       "5×5 gridworld with goal, lava, and step penalty. Toggle between value iteration, policy iteration, and tabular Q-learning. Watch V-values fill in as a heatmap and the greedy policy crystallize as arrows.",
@@ -221,7 +204,7 @@ const DEMOS = [
   },
   {
     id: 'rlhf',
-    category: 'advanced',
+    category: 'ml',
     title: 'RLHF — Reward Modeling + Policy Update',
     description:
       "1-D toy of the RLHF pipeline used to align modern LLMs. Sample preference pairs, fit a Bradley-Terry reward model, take a KL-regularized PPO step, watch the policy mean march toward the true x⋆.",
@@ -229,7 +212,7 @@ const DEMOS = [
   },
   {
     id: 'simplex-tableau',
-    category: 'advanced',
+    category: 'lp',
     title: 'Interactive Simplex Tableau',
     description:
       "Click-to-pivot tableau with practice mode. Click a column to enter, see the ratio test, click a row to pivot. Feasible-region plot tracks the current vertex. Each pivot now also writes out the elementary row operations in algebraic form.",
@@ -237,7 +220,7 @@ const DEMOS = [
   },
   {
     id: 'tableau-pivoter',
-    category: 'advanced',
+    category: 'lp',
     title: 'Tableau Pivoter — Step-by-Step Row Ops',
     description:
       "Type your own LP, pick any pivot row and column, watch the elementary row operations play out one at a time with the algebra written underneath. The Gauss-Jordan mechanics behind every simplex iteration, exposed.",
@@ -245,7 +228,7 @@ const DEMOS = [
   },
   {
     id: 'dual-construction',
-    category: 'advanced',
+    category: 'lp',
     title: 'Primal → Dual Construction',
     description:
       "Build the dual of a general LP one stage at a time: transpose A, swap b ↔ c, flip objective sense, then apply per-constraint and per-variable sign rules. Toggle constraint types (≤ / = / ≥) and variable signs to see the dual reshape live.",
@@ -253,7 +236,7 @@ const DEMOS = [
   },
   {
     id: 'sensitivity-walkthrough',
-    category: 'advanced',
+    category: 'lp',
     title: 'Sensitivity Analysis — Step-by-Step Derivation',
     description:
       "Derive allowable ranges for c_j (basic & non-basic separately) and b_i from the optimal tableau. Each ratio test is written out in algebra; the binding bounds are highlighted. Mini-simplex runs internally on any LP you type.",
@@ -261,7 +244,7 @@ const DEMOS = [
   },
   {
     id: 'duality-sensitivity',
-    category: 'advanced',
+    category: 'lp',
     title: 'LP Duality & Sensitivity Analysis',
     description:
       "Slide the constraint right-hand-sides; watch the feasible region deform, the optimum vertex jump, and the shadow prices update live. Dual problem displayed alongside the primal. Sensitivity ranges shown as bars.",
@@ -269,7 +252,7 @@ const DEMOS = [
   },
   {
     id: 'decomposition',
-    category: 'advanced',
+    category: 'ip',
     title: 'IP Decomposition: Benders, Dantzig-Wolfe, Lagrangian',
     description:
       "Three classical decompositions side-by-side. Master/subproblem split, bound progression chart, per-iteration table, and pseudocode for each method.",
@@ -277,7 +260,7 @@ const DEMOS = [
   },
   {
     id: 'heuristics',
-    category: 'advanced',
+    category: 'ip',
     title: 'Heuristics & Metaheuristics (TSP + Knapsack)',
     description:
       "Animated 2-opt local search and simulated annealing on a 15-city TSP, plus a genetic algorithm on 0-1 knapsack. Watch the tour rearrange itself in real time.",
@@ -285,7 +268,7 @@ const DEMOS = [
   },
   {
     id: 'branch-bound',
-    category: 'advanced',
+    category: 'ip',
     title: 'Branch-and-Bound Tree Explorer',
     description:
       "Watch a small MILP get solved one node at a time. Click any node to see its LP relaxation; the tree panel shows branching decisions, fathoming, and the primal/dual gap closing.",
@@ -293,7 +276,7 @@ const DEMOS = [
   },
   {
     id: 'fista',
-    category: 'advanced',
+    category: 'nlp',
     title: 'Proximal Gradient & FISTA',
     description:
       "Lasso-style 2D problem. ISTA vs FISTA side-by-side, with the soft-thresholding step explicit and the Nesterov-momentum extrapolation drawn as a separate point on the contour plot.",
@@ -301,7 +284,7 @@ const DEMOS = [
   },
   {
     id: 'frank-wolfe',
-    category: 'advanced',
+    category: 'nlp',
     title: 'Frank-Wolfe with Active Vertex Tracking',
     description:
       "Conditional gradient on a polytope. Watch the active vertex set grow and the iterate jump to the closest point in conv(S) at each step. Vanilla FW vs fully-corrective FW side-by-side. Drag the target.",
@@ -309,7 +292,7 @@ const DEMOS = [
   },
   {
     id: 'sos',
-    category: 'advanced',
+    category: 'nlp',
     title: 'Polynomial Optimization & SOS',
     description:
       "Lasserre's hierarchy in action. Slide the SOS order to watch the lower bound λ_d tighten on a univariate polynomial. The moment-matrix structure plus a CVXPY code stepper.",
@@ -317,7 +300,7 @@ const DEMOS = [
   },
   {
     id: 'algebraic-opt',
-    category: 'advanced',
+    category: 'nlp',
     title: 'Algebraic Optimization',
     description:
       "Lagrange multipliers on an algebraic curve x⁴ + y⁴ = 1. Plot shows the objective contours, constraint curve, and all four real critical points. Three computational paths: sympy, homotopy continuation, SOS lifting.",
@@ -325,7 +308,7 @@ const DEMOS = [
   },
   {
     id: 'gantt',
-    category: 'advanced',
+    category: 'ip',
     title: 'Job-Shop Gantt Chart (CP-SAT)',
     description:
       "The numerical answer from the CP-SAT job-shop demo turned into a picture. Three jobs, three machines, makespan 11. Toggle between machine view and job view; hover any block to highlight its job and machine neighbors.",
@@ -333,6 +316,14 @@ const DEMOS = [
   },
 
   // ── In-class tutorials ─────────────────────────────────────────
+  {
+    id: 'python-basics',
+    category: 'tutorials',
+    title: 'Python Basics — Install, Packages, Syntax, Plotting',
+    description:
+      'New to Python or rusty? Walk through install paths (Anaconda, conda, pyenv, Colab), virtual environments, the scientific stack (numpy/pandas/matplotlib/scipy/geopandas), and core syntax (variables, loops, functions, comprehensions). Every snippet has a copy button.',
+    Component: PythonBasicsTutorial,
+  },
   {
     id: 'perceptron-tutorial',
     category: 'tutorials',
@@ -623,7 +614,7 @@ export default function App() {
               marginBottom: 10,
             }}
           >
-            ISE 5406 · Nonlinear Programming · Spring 2026
+            Optimization for Operations Research · Spring 2026
           </div>
           <h1
             style={{
