@@ -7,6 +7,7 @@ import {
   Terminal,
   Package,
 } from "lucide-react";
+import { OutputReader } from "./output_reader.jsx";
 
 /* ============================================================
    GUROBI (gurobipy) — CODE STEPPER TUTORIAL
@@ -601,7 +602,23 @@ export default function GurobiTutorial() {
         <StatePanel state={state} />
       </div>
 
-      <GurobiOutputReader problemKey={problem.key} />
+      {problem.kind === "LP" ? (
+        <OutputReader
+          title="Reading Gurobi's LP (simplex) output, column by column"
+          intro="Gurobi prints a setup block (license, model stats, presolve), then a per-iteration simplex table, then a summary. Click Next (or any card) to step through every column — the corresponding column lights up in the log and the textbox at the bottom tells you exactly what that column did on this run."
+          columns={GUROBI_LP_COLS}
+          logs={GUROBI_LP_LOGS}
+          problemKey={problem.key}
+        />
+      ) : (
+        <OutputReader
+          title="Reading Gurobi's MIP (branch-and-cut) output, column by column"
+          intro="For MIP/MIQP/nonconvex problems Gurobi prints a Node-Bound-Work table. All eleven columns are documented below — step through them with Next or click any card. The textbox at the bottom describes what that column did on THIS specific solve."
+          columns={GUROBI_MIP_COLS}
+          logs={GUROBI_MIP_LOGS}
+          problemKey={problem.key}
+        />
+      )}
       <PedagogicalNotes />
     </div>
   );
@@ -798,213 +815,137 @@ function StatePanel({ state }) {
 }
 
 // ============================================================
-// Output reader — explains Gurobi's iteration log
+// Output reader — column data for Gurobi
+// Two schemas: LP simplex (5 cols) vs MIP branch-and-cut (11 cols)
 // ============================================================
-const GUROBI_LOGS = {
+const GUROBI_LP_COLS = [
+  { key: "iter", label: "Iteration", def: "Simplex pivot count. Each row is a pivot; the displayed rows are sampled. For LPs this is the headline performance number." },
+  { key: "obj", label: "Objective", def: "Current LP objective. For dual simplex starts at the dual relaxation's bound and approaches the optimum as primal feasibility is achieved." },
+  { key: "pinf", label: "Primal Inf.", def: "Sum of primal infeasibilities. For dual simplex, starts large and drives to zero. For primal simplex, stays at zero throughout." },
+  { key: "dinf", label: "Dual Inf.", def: "Sum of dual (reduced-cost) infeasibilities. Symmetric counterpart to Primal Inf.; primal simplex drives this to zero." },
+  { key: "time", label: "Time", def: "Wall-clock seconds. Often '0s' for tiny LPs; for big LPs lets you spot which pivots are slow." },
+];
+
+const GUROBI_MIP_COLS = [
+  { key: "prefix", label: "(prefix)", def: "Empty for ordinary B&B rows. 'H' = a HEURISTIC found this incumbent (feasibility pump, RINS, RENS). '*' = an incumbent found via LP rounding or strong-branching." },
+  { key: "expl", label: "Expl", def: "Total nodes EXPLORED so far. Doesn't include the root LP. The headline 'how hard was this' metric for MIPs." },
+  { key: "unexpl", label: "Unexpl", def: "Number of OPEN nodes still in the queue. Rises as branching creates children, falls as nodes are pruned/fathomed." },
+  { key: "obj", label: "Obj", def: "LP-relaxation objective at the CURRENT node being processed. Empty cells (-) mean the node was cut off before solving." },
+  { key: "depth", label: "Depth", def: "Depth of the current node. Deep + few nodes = depth-first dive; shallow + many = best-bound search." },
+  { key: "intinf", label: "IntInf", def: "Integer-restricted variables that are FRACTIONAL in the current LP relaxation. Drops to zero when an integer-feasible solution is found at this node." },
+  { key: "incumbent", label: "Incumbent", def: "Best feasible objective found so far. The 'answer if I stopped now'. '-' means no incumbent yet — feasibility hasn't been certified." },
+  { key: "bestbd", label: "BestBd", def: "Best dual bound across all open nodes. For min, a lower bound; for max, an upper bound. Improves monotonically as branching tightens." },
+  { key: "gap", label: "Gap", def: "(|Incumbent − BestBd| / |Incumbent|) · 100%. Zero = proven optimal. Default termination tolerance: 1e-4 (0.01%)." },
+  { key: "itnode", label: "It/Node", def: "Average simplex iterations per B&B node. < 5 healthy; > 50 means each node's LP is hard — consider tighter formulation or parallel solves." },
+  { key: "time", label: "Time", def: "Wall-clock seconds since solve started. Use to spot phase changes." },
+];
+
+const GUROBI_LP_LOGS = {
   lp: {
-    title: "Gurobi LP (dual simplex) log",
-    setup:
+    setupText:
       "Gurobi Optimizer version 11.0.2 build v11.0.2rc0 (mac64[arm])\nThread count: 8 physical cores, 8 logical processors\nOptimize a model with 3 rows, 2 columns and 6 nonzeros\nModel fingerprint: 0x12345678\nCoefficient statistics:\n  Matrix range     [1e+00, 4e+00]\n  Objective range  [3e+01, 4e+01]\n  Bounds range     [0e+00, 0e+00]\n  RHS range        [3e+01, 1e+02]\nPresolve time: 0.00s\nPresolved: 3 rows, 2 columns, 6 nonzeros",
-    header: "Iteration    Objective       Primal Inf.    Dual Inf.      Time",
     rows: [
-      "       0    3.5000000e+01   3.000000e+01   0.000000e+00      0s",
-      "       3    1.1000000e+03   0.000000e+00   0.000000e+00      0s",
+      { cells: { iter: "       0", obj: "3.5000000e+01", pinf: "3.000000e+01", dinf: "0.000000e+00", time: "0s" } },
+      { cells: { iter: "       3", obj: "1.1000000e+03", pinf: "0.000000e+00", dinf: "0.000000e+00", time: "0s" } },
     ],
-    summary:
-      "Solved in 3 iterations and 0.00 seconds (0.00 work units)\nOptimal objective  1.100000000e+03",
-    interpretation:
-      "Notice 'Coefficient statistics' — Gurobi flags coefficient ranges, and an order-of-magnitude difference between matrix and RHS is fine; ratios > 1e9 trigger numerical warnings. Three iterations of dual simplex find optimum 1100. Primal Inf. starts at 30 (initial dual basis is primal-infeasible — that's expected for dual simplex) and drops to zero in three pivots.",
-  },
-  facility: {
-    title: "Gurobi MILP (branch-and-cut) log",
-    setup:
-      "Optimize a model with 5 rows, 8 columns and 18 nonzeros\nVariable types: 6 continuous, 2 integer (2 binary)\nCoefficient statistics:\n  Matrix range     [1e+00, 6e+01]\n  Objective range  [3e+00, 1e+02]\n  Bounds range     [1e+00, 1e+00]\n  RHS range        [1e+01, 6e+01]\nPresolve time: 0.00s\nPresolved: 5 rows, 8 columns, 18 nonzeros",
-    header: "    Nodes    |    Current Node    |     Objective Bounds      |     Work\n Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time",
-    rows: [
-      "     0     0  395.00000    0    2          -  395.00000      -     -    0s",
-      "H    0     0                     415.0000000  395.00000  4.82%     -    0s",
-      "     0     0          -    0          415.00000  415.00000  0.00%     -    0s",
-    ],
-    summary:
-      "Cutting planes:\n  Implied bound: 1\nExplored 1 nodes (4 simplex iterations) in 0.02 seconds (0.00 work units)\nThread count was 8 (of 8 available processors)\nSolution count 1: 415\nOptimal solution found (tolerance 1.00e-04)\nBest objective 4.150000000000e+02, best bound 4.150000000000e+02, gap 0.0000%",
-    interpretation:
-      "'H' marker on row 2 = Heuristic found a new incumbent (415). LP relaxation gave a bound of 395, then heuristic-feasible 415, then dual climbed to 415 too — gap closes. ONE node explored. The 'Implied bound: 1' line at the end tells you Gurobi added one cutting plane; richer problems have RLT, MIR, Gomory, GUB Cover, etc.",
-  },
-  miqp: {
-    title: "Gurobi MIQP (convex Q + binaries) log",
-    setup:
-      "Optimize a model with 13 rows, 12 columns and 30 nonzeros\nModel has 21 quadratic objective terms\nVariable types: 6 continuous, 6 integer (6 binary)\nCoefficient statistics:\n  Matrix range     [1e+00, 5e+00]\n  Objective range  [0e+00, 0e+00]\n  QObjective range [1e-01, 5e+01]\nPresolve time: 0.01s\nPresolved: 13 rows, 12 columns, 30 nonzeros\nPresolved model has 21 quadratic objective terms",
-    header: "    Nodes    |    Current Node    |     Objective Bounds      |     Work\n Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time",
-    rows: [
-      "     0     0    0.07210    0    6          -    0.07210      -     -    0s",
-      "H    0     0                       1.4520310    0.07210  95.0%     -    0s",
-      "H    0     0                       0.4128290    0.07210  82.5%     -    0s",
-      "*    9     2               7       0.2841020    0.27892  1.83%   8.4    0s",
-      "    17     0       cutoff   8         0.28410    0.28410  0.00%  22.4    0s",
-    ],
-    summary:
-      "Cutting planes:\n  RLT: 4\n  BQP: 2\nExplored 17 nodes (380 simplex iterations) in 0.08 seconds\nSolution count 3: 0.284102 0.412829 1.45203\nOptimal solution found (tolerance 1.00e-06)\nBest objective 2.841020000000e-01, best bound 2.841020000000e-01, gap 0.0000%",
-    interpretation:
-      "Two MIQP-specific things to notice. (1) 'QObjective range' replaces or supplements the matrix range — Gurobi reports the quadratic-term magnitudes separately. (2) 'Cutting planes: RLT, BQP' — RLT (Reformulation–Linearization Technique) and BQP (Boolean Quadratic Polytope) cuts target the quadratic structure. Three incumbents found ('H' twice, then '*' once at node 9), then dual chases primal until gap closes at node 17.",
-  },
-  bienstock: {
-    title: "Gurobi spatial B&B log (NonConvex=2)",
-    setup:
-      "Optimize a model with 0 rows, 5 columns and 0 nonzeros\nModel has 6 quadratic constraints\nCoefficient statistics:\n  Matrix range     [0e+00, 0e+00]\n  QMatrix range    [1e-01, 1e+00]\n  QLMatrix range   [1e+00, 2e+00]\n  Objective range  [1e+00, 1e+00]\n  Bounds range     [1e+01, 1e+01]\n  RHS range        [0e+00, 0e+00]\n  QRHS range       [1e-01, 3e+00]\nContinuous model is non-convex -- solving as a MIP\n\nPresolve time: 0.01s\nPresolved: 38 rows, 18 columns, 92 nonzeros\nPresolved model has 6 bilinear constraint(s)",
-    header: "    Nodes    |    Current Node    |     Objective Bounds      |     Work\n Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time",
-    rows: [
-      "     0     0    1.41421    0    6          -    1.41421      -     -    0s",
-      "     0     0    1.41210    0    6          -    1.41210      -     -    0s",
-      "     0     0    1.41210    0    6          -    1.41210      -     -    0s",
-      "H    8     5                       1.2278000    1.39210  13.4%     -    0s",
-      "    34    11    1.30945    7    1    1.22780    1.30945  6.65%   8.0    0s",
-      "    89     0     cutoff             1.22780    1.22780  0.00%   7.1    0s",
-    ],
-    summary:
-      "Cutting planes:\n  RLT: 18\n  PSDLP: 4\n  BQP: 9\nExplored 89 nodes (1247 simplex iterations) in 0.32 seconds\nSolution count 2: 1.2278 1.225\nOptimal solution found (tolerance 1.00e-04)\nBest objective 1.227800000000e+00, best bound 1.227800000000e+00, gap 0.0000%",
-    interpretation:
-      "Two diagnostic lines worth pointing at. (1) 'Continuous model is non-convex -- solving as a MIP' confirms NonConvex=2 took effect; without it Gurobi would error out. (2) The presolved problem balloons from 5 columns to 18 — Gurobi added 13 auxiliary 'product variables' to linearize the bilinears. The 6 bilinear constraints become 38 linear rows. Spatial branching happens on those auxiliaries. RLT (18 cuts) and PSDLP (4) are the heavy lifters here. Compare to SCIP's 137 nodes for the same problem — Gurobi closed the gap in 89.",
+    summary: "Solved in 3 iterations and 0.00 seconds (0.00 work units)\nOptimal objective  1.100000000e+03",
+    finalSummary:
+      "Three pivots of dual simplex find the optimum 1100. Notice 'Coefficient statistics' in the setup — order-of-magnitude differences between matrix and RHS are fine; ratios > 1e9 trigger numerical warnings.",
+    perCol: {
+      iter: "Two rows: pivot 0 and pivot 3. Three total pivots — only two are printed because the rest are uninteresting.",
+      obj: "35 → 1100. The huge jump is dual simplex finding the optimal vertex in three pivots. Starts with a small dual-feasible basis, ends at the optimum.",
+      pinf: "30 → 0. THIS is the diagnostic column. Initial dual basis is primal-INFEASIBLE (sum of constraint violations = 30). Dual simplex's job is to drive this to zero. It does.",
+      dinf: "0 → 0. Zero throughout — dual simplex maintains dual feasibility by construction. Primal simplex would show the opposite pattern.",
+      time: "0s → 0s. Sub-second total. For LPs this size you'd never even glance at the time column.",
+    },
   },
 };
 
-const GUROBI_COL_DEFS = [
-  { key: "iter", label: "Iteration", explain: "Cumulative simplex pivots. For LPs this is the headline performance number; for MIPs it's a secondary stat (you care about node count first)." },
-  { key: "obj", label: "Objective", explain: "Current LP-relaxation objective at this iteration. Approaches the optimum from the side dictated by simplex (above for max, below for min)." },
-  { key: "pinf", label: "Primal Inf.", explain: "Sum of primal infeasibilities. For dual simplex, starts large and drives to zero. For primal simplex, stays at zero throughout." },
-  { key: "dinf", label: "Dual Inf.", explain: "Sum of dual infeasibilities — i.e., the reduced-cost violations. Symmetric counterpart to Primal Inf.; primal simplex drives this to zero." },
-  { key: "expl", label: "Expl", explain: "Total branch-and-bound nodes explored so far. Doesn't include the root LP." },
-  { key: "unexpl", label: "Unexpl", explain: "Number of open nodes still in the queue. Watch this rise as branching creates children, then fall as nodes are pruned/fathomed." },
-  { key: "incumbent", label: "Incumbent", explain: "Best feasible objective found so far. The 'answer if I stopped now'." },
-  { key: "bestbd", label: "BestBd", explain: "Best dual bound across all open nodes. For minimization it's a lower bound; for maximization it's an upper bound. Improves as branching tightens." },
-  { key: "gap", label: "Gap", explain: "(|Incumbent − BestBd| / |Incumbent|) · 100%. Zero means proven optimal. The default termination tolerance is 1e-4 (0.01%)." },
-  { key: "itnode", label: "It/Node", explain: "Average simplex iterations per B&B node. Less than 5 = healthy; more than 50 = each node's LP is hard, consider tighter formulation or parallel." },
-  { key: "depth", label: "Depth", explain: "Depth of the current node in the search tree. Deep + few nodes = depth-first; shallow + many nodes = best-bound search." },
-  { key: "intinf", label: "IntInf", explain: "Number of integer-restricted variables that are fractional in the current LP relaxation. Drops to zero when an integer-feasible solution is found." },
-  { key: "h_marker", label: "H marker", explain: "A row beginning with 'H' = a heuristic (not LP rounding, not branching) found this incumbent. Most common: feasibility pump, RINS, RENS." },
-  { key: "star_marker", label: "* marker", explain: "Row beginning with '*' = a new incumbent found via LP rounding or strong-branching evaluation at a regular B&B node. The most common improvement source." },
-];
-
-function GurobiOutputReader({ problemKey }) {
-  const log = GUROBI_LOGS[problemKey];
-  const [hoverCol, setHoverCol] = useState(null);
-  if (!log) return null;
-  return (
-    <div style={{ marginTop: 28, padding: 18, border: "1px solid #d8d3c4", background: "#fdfaf1", borderRadius: 10 }}>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
-        Reading Gurobi's output, column by column
-      </div>
-      <div style={{ fontSize: 13, color: "#555", lineHeight: 1.55, marginBottom: 12 }}>
-        Gurobi prints a setup block (license, model stats, presolve), then a per-iteration table, then a summary. Hover any header below to see what each column means.
-      </div>
-
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
-        {GUROBI_COL_DEFS.map((c) => (
-          <button
-            key={c.key}
-            onMouseEnter={() => setHoverCol(c.key)}
-            onMouseLeave={() => setHoverCol(null)}
-            onClick={() => setHoverCol(hoverCol === c.key ? null : c.key)}
-            style={{
-              padding: "4px 9px",
-              fontSize: 11,
-              fontFamily: "monospace",
-              border: "1px solid #c8b76c",
-              borderRadius: 4,
-              background: hoverCol === c.key ? "#f5d68d" : "#fff",
-              cursor: "pointer",
-            }}
-          >
-            {c.label}
-          </button>
-        ))}
-      </div>
-
-      {hoverCol && (
-        <div
-          style={{
-            marginBottom: 12,
-            padding: "8px 12px",
-            background: "#fff8e1",
-            border: "1px solid #f5d68d",
-            borderRadius: 6,
-            fontSize: 13,
-            color: "#3d2f00",
-          }}
-        >
-          <b style={{ fontFamily: "monospace" }}>{GUROBI_COL_DEFS.find((c) => c.key === hoverCol).label}</b>
-          {": "}
-          {GUROBI_COL_DEFS.find((c) => c.key === hoverCol).explain}
-        </div>
-      )}
-
-      <div style={{ fontFamily: "monospace", fontSize: 11, color: "#888", marginBottom: 4 }}>
-        ── {log.title} ──
-      </div>
-      <pre
-        style={{
-          background: "#0d0d0d",
-          color: "#dadada",
-          padding: 12,
-          borderRadius: 6,
-          fontSize: 11,
-          fontFamily: "'JetBrains Mono', Menlo, monospace",
-          lineHeight: 1.55,
-          overflowX: "auto",
-          margin: 0,
-          whiteSpace: "pre",
-        }}
-      >
-        <div style={{ color: "#7f7864" }}>{log.setup}</div>
-        <div style={{ color: "#5a5a5a", marginTop: 4 }}>—</div>
-        <div style={{ color: "#7dd87d" }}>{log.header}</div>
-        {log.rows.map((row, i) => (
-          <div
-            key={i}
-            style={{
-              color: row.startsWith("H")
-                ? "#9a4caa"
-                : row.startsWith("*")
-                ? "#f5a524"
-                : "#dadada",
-            }}
-          >
-            {row}
-          </div>
-        ))}
-        <div style={{ color: "#5a5a5a", marginTop: 6 }}>—</div>
-        <div>{log.summary}</div>
-      </pre>
-
-      <div
-        style={{
-          marginTop: 12,
-          padding: "10px 14px",
-          background: "#fff",
-          border: "1px solid #ddd",
-          borderRadius: 6,
-          fontSize: 13,
-          lineHeight: 1.55,
-          color: "#222",
-        }}
-      >
-        <div style={{ fontFamily: "monospace", fontSize: 10, color: "#888", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 4 }}>
-          What this output is telling you
-        </div>
-        {log.interpretation}
-      </div>
-
-      <div style={{ marginTop: 10, display: "flex", gap: 12, fontSize: 11, color: "#666", flexWrap: "wrap" }}>
-        <span>
-          <span style={{ color: "#9a4caa", fontWeight: 700, fontFamily: "monospace" }}>H</span> = heuristic incumbent
-        </span>
-        <span>
-          <span style={{ color: "#f5a524", fontWeight: 700, fontFamily: "monospace" }}>*</span> = LP-rounded / B&B incumbent
-        </span>
-        <span>blank prefix = ordinary B&B node</span>
-      </div>
-    </div>
-  );
-}
+const GUROBI_MIP_LOGS = {
+  facility: {
+    setupText:
+      "Optimize a model with 5 rows, 8 columns and 18 nonzeros\nVariable types: 6 continuous, 2 integer (2 binary)\nCoefficient statistics:\n  Matrix range     [1e+00, 6e+01]\n  Objective range  [3e+00, 1e+02]\n  Bounds range     [1e+00, 1e+00]\n  RHS range        [1e+01, 6e+01]\nPresolve time: 0.00s\nPresolved: 5 rows, 8 columns, 18 nonzeros",
+    rows: [
+      { cells: { prefix: "", expl: "0", unexpl: "0", obj: "395.00000", depth: "0", intinf: "2", incumbent: "-", bestbd: "395.00000", gap: "-", itnode: "-", time: "0s" } },
+      { color: "#9a4caa", cells: { prefix: "H", expl: "0", unexpl: "0", obj: "", depth: "", intinf: "", incumbent: "415.0000000", bestbd: "395.00000", gap: "4.82%", itnode: "-", time: "0s" } },
+      { cells: { prefix: "", expl: "0", unexpl: "0", obj: "-", depth: "0", intinf: "", incumbent: "415.00000", bestbd: "415.00000", gap: "0.00%", itnode: "-", time: "0s" } },
+    ],
+    summary:
+      "Cutting planes:\n  Implied bound: 1\nExplored 1 nodes (4 simplex iterations) in 0.02 seconds (0.00 work units)\nThread count was 8 (of 8 available processors)\nSolution count 1: 415\nOptimal solution found (tolerance 1.00e-04)\nBest objective 4.150000000000e+02, best bound 4.150000000000e+02, gap 0.0000%",
+    finalSummary:
+      "Root LP gives bound 395. A heuristic ('H' row) finds feasible 415. Then dual climbs to 415 and gap closes — ONE node total. The 'Implied bound: 1' line at the end means Gurobi added one cutting plane.",
+    perCol: {
+      prefix: "Three rows: blank → 'H' → blank. The 'H' is critical — it tells you a HEURISTIC (not LP rounding) discovered the incumbent 415. Without that flag you'd think it came from branching.",
+      expl: "0, 0, 0 — never branched. The whole solve happened at the root.",
+      unexpl: "0, 0, 0 — no open nodes ever queued.",
+      obj: "395 → blank → '-'. The first row is the LP relaxation objective at the root. Heuristic rows don't have an LP objective. The third row's '-' means the LP wasn't re-solved.",
+      depth: "0, blank, 0. We never left the root.",
+      intinf: "2 → blank → blank. Two integer variables (y_WarehA, y_WarehB) were fractional at the LP root. The heuristic immediately fixed them, dropping IntInf to zero.",
+      incumbent: "- → 415 → 415. Dash on the first row means 'no feasible solution yet'. The heuristic locks in 415 on row 2.",
+      bestbd: "395 → 395 → 415. The dual climbs from 395 to 415 once Gurobi proves the heuristic's solution is optimal.",
+      gap: "- → 4.82% → 0.00%. Closes from undefined → 4.82% (after first feasible) → 0% (proven).",
+      itnode: "All '-'. Only one node, so the average is undefined.",
+      time: "All '0s'. Two centiseconds total per the summary.",
+    },
+  },
+  miqp: {
+    setupText:
+      "Optimize a model with 13 rows, 12 columns and 30 nonzeros\nModel has 21 quadratic objective terms\nVariable types: 6 continuous, 6 integer (6 binary)\nCoefficient statistics:\n  Matrix range     [1e+00, 5e+00]\n  Objective range  [0e+00, 0e+00]\n  QObjective range [1e-01, 5e+01]\nPresolve time: 0.01s\nPresolved: 13 rows, 12 columns, 30 nonzeros\nPresolved model has 21 quadratic objective terms",
+    rows: [
+      { cells: { prefix: "", expl: "0", unexpl: "0", obj: "0.07210", depth: "0", intinf: "6", incumbent: "-", bestbd: "0.07210", gap: "-", itnode: "-", time: "0s" } },
+      { color: "#9a4caa", cells: { prefix: "H", expl: "0", unexpl: "0", obj: "", depth: "", intinf: "", incumbent: "1.4520310", bestbd: "0.07210", gap: "95.0%", itnode: "-", time: "0s" } },
+      { color: "#9a4caa", cells: { prefix: "H", expl: "0", unexpl: "0", obj: "", depth: "", intinf: "", incumbent: "0.4128290", bestbd: "0.07210", gap: "82.5%", itnode: "-", time: "0s" } },
+      { color: "#f5a524", cells: { prefix: "*", expl: "9", unexpl: "2", obj: "", depth: "7", intinf: "", incumbent: "0.2841020", bestbd: "0.27892", gap: "1.83%", itnode: "8.4", time: "0s" } },
+      { cells: { prefix: "", expl: "17", unexpl: "0", obj: "cutoff", depth: "8", intinf: "", incumbent: "0.28410", bestbd: "0.28410", gap: "0.00%", itnode: "22.4", time: "0s" } },
+    ],
+    summary:
+      "Cutting planes:\n  RLT: 4\n  BQP: 2\nExplored 17 nodes (380 simplex iterations) in 0.08 seconds\nSolution count 3: 0.284102 0.412829 1.45203\nOptimal solution found (tolerance 1.00e-06)\nBest objective 2.841020000000e-01, best bound 2.841020000000e-01, gap 0.0000%",
+    finalSummary:
+      "Best-subset MIQP. Three incumbents found: 'H' twice (heuristic), then '*' once (B&B at node 9). Each new incumbent shrinks the gap. By node 17, dual catches primal and gap = 0%. RLT and BQP cuts target the quadratic structure — that's what 'Cutting planes' tells you in the summary.",
+    perCol: {
+      prefix: "Five rows: blank, H, H, *, blank. Two heuristics + one B&B-discovered incumbent. The pattern shows BOTH incumbent sources at work.",
+      expl: "0 → 0 → 0 → 9 → 17. Most of the work happens between rows 4 and 5 (8 more nodes). Total: 17 nodes explored.",
+      unexpl: "0 → 0 → 0 → 2 → 0. Two open nodes at the time of the '*' incumbent — siblings that will be explored later. Drops to 0 by the end.",
+      obj: "0.072 → blank → blank → blank → 'cutoff'. 'cutoff' on the last row means the LP relaxation at this node was worse than the incumbent — Gurobi pruned it without solving fully.",
+      depth: "0 → blank → blank → 7 → 8. The deepest node visited was at depth 8 — moderate.",
+      intinf: "6 → blank → blank → blank → blank. At the root, all 6 binaries are fractional. Heuristics filled them in directly.",
+      incumbent: "- → 1.45 → 0.41 → 0.28 → 0.28. Dropped 5× across three improvements. Notice the first heuristic finds a TERRIBLE 1.45, then a better 0.41, then B&B finds the actual optimum 0.28.",
+      bestbd: "0.072 → 0.072 → 0.072 → 0.279 → 0.284. THIS is the storyline. Dual stayed at 0.072 (the loose root LP) until node 9. Then jumped to 0.279 — the bound finally caught up because branching eliminated the cheap fractional regions. Final 0.284 = primal — done.",
+      gap: "- → 95% → 82.5% → 1.83% → 0%. Watch the gap collapse: incumbent improvements close it from above, dual-bound improvements close it from below.",
+      itnode: "- → - → - → 8.4 → 22.4. The first three rows have no LP/node ratio (root). 22.4 it/node by the end is HIGH — each MIQP relaxation is expensive.",
+      time: "All '0s'. 0.08s total per the summary.",
+    },
+  },
+  bienstock: {
+    setupText:
+      "Optimize a model with 0 rows, 5 columns and 0 nonzeros\nModel has 6 quadratic constraints\nCoefficient statistics:\n  Matrix range     [0e+00, 0e+00]\n  QMatrix range    [1e-01, 1e+00]\n  QLMatrix range   [1e+00, 2e+00]\n  Objective range  [1e+00, 1e+00]\n  Bounds range     [1e+01, 1e+01]\n  RHS range        [0e+00, 0e+00]\n  QRHS range       [1e-01, 3e+00]\nContinuous model is non-convex -- solving as a MIP\n\nPresolve time: 0.01s\nPresolved: 38 rows, 18 columns, 92 nonzeros\nPresolved model has 6 bilinear constraint(s)",
+    rows: [
+      { cells: { prefix: "", expl: "0", unexpl: "0", obj: "1.41421", depth: "0", intinf: "6", incumbent: "-", bestbd: "1.41421", gap: "-", itnode: "-", time: "0s" } },
+      { cells: { prefix: "", expl: "0", unexpl: "0", obj: "1.41210", depth: "0", intinf: "6", incumbent: "-", bestbd: "1.41210", gap: "-", itnode: "-", time: "0s" } },
+      { cells: { prefix: "", expl: "0", unexpl: "0", obj: "1.41210", depth: "0", intinf: "6", incumbent: "-", bestbd: "1.41210", gap: "-", itnode: "-", time: "0s" } },
+      { color: "#9a4caa", cells: { prefix: "H", expl: "8", unexpl: "5", obj: "", depth: "", intinf: "", incumbent: "1.2278000", bestbd: "1.39210", gap: "13.4%", itnode: "-", time: "0s" } },
+      { cells: { prefix: "", expl: "34", unexpl: "11", obj: "1.30945", depth: "7", intinf: "1", incumbent: "1.22780", bestbd: "1.30945", gap: "6.65%", itnode: "8.0", time: "0s" } },
+      { cells: { prefix: "", expl: "89", unexpl: "0", obj: "cutoff", depth: "", intinf: "", incumbent: "1.22780", bestbd: "1.22780", gap: "0.00%", itnode: "7.1", time: "0s" } },
+    ],
+    summary:
+      "Cutting planes:\n  RLT: 18\n  PSDLP: 4\n  BQP: 9\nExplored 89 nodes (1247 simplex iterations) in 0.32 seconds\nSolution count 2: 1.2278 1.225\nOptimal solution found (tolerance 1.00e-04)\nBest objective 1.227800000000e+00, best bound 1.227800000000e+00, gap 0.0000%",
+    finalSummary:
+      "Spatial B&B in slow motion. Setup says 'Continuous model is non-convex -- solving as a MIP' — confirms NonConvex=2 took effect. The presolved model balloons from 5 columns to 18 (Gurobi added 13 auxiliary product variables to linearize the 6 bilinears). 89 nodes vs SCIP's 137 on the same problem.",
+    perCol: {
+      prefix: "Six rows. The 'H' on row 4 is when the FIRST feasible solution lands (at node 8) — feasibility was hard to certify because of the reverse-convex constraints.",
+      expl: "0 → 0 → 0 → 8 → 34 → 89. Three root-LP rows (with cuts), then branching kicks in. 89 nodes total.",
+      unexpl: "0 → 0 → 0 → 5 → 11 → 0. Queue peaks at 11 open nodes around the middle. Drains to 0 at the end.",
+      obj: "1.41421 → 1.41210 → 1.41210 → blank → 1.30945 → 'cutoff'. THE storyline column. Root LP gives 1.41421 (just √2 from e1). Cuts shave it to 1.41210. THEN BRANCHING brings it down to 1.30945. The last node was cut off before solving its LP.",
+      depth: "0 → 0 → 0 → blank → 7 → blank. Depth-7 branching is moderate; the search explored a balanced tree.",
+      intinf: "6 → 6 → 6 → blank → 1 → blank. 'IntInf=6' at the root means six 'integer' variables (the auxiliary product variables Gurobi added) are fractional. By node 34 only one is fractional — the search is closing in on a vertex.",
+      incumbent: "- → - → - → 1.2278 → 1.2278 → 1.2278. NO INCUMBENT until node 8. That's striking — the reverse-convex disks make feasibility certification hard.",
+      bestbd: "1.41421 → 1.41210 → 1.41210 → 1.39210 → 1.30945 → 1.22780. Dual converges QUICKLY at the start (cuts close 0.002 instantly), but the path to 1.22780 goes through 1.39210 → 1.30945 — gradual, branching-driven. If this had stalled at, say, 1.30 instead of reaching 1.22780, the takeaway would be: try stronger cuts (PSDLP, RLT-RDV), tighter branching (strong branch on the 18 auxiliaries), or reformulate the bilinears manually.",
+      gap: "- → - → - → 13.4% → 6.65% → 0%. Gap defined only after the H-row introduces an incumbent. Closes from 13.4% to 0% in 81 nodes.",
+      itnode: "- → - → - → - → 8.0 → 7.1. Average LP iterations per node ~7-8. Healthy. Total simplex iterations: 1247 across 89 nodes.",
+      time: "All '0s'. 0.32s total per the summary — slower than the convex MIQP but well under a second.",
+    },
+  },
+};
 
 // ============================================================
 // Install panel

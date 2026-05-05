@@ -7,6 +7,7 @@ import {
   Terminal,
   Package,
 } from "lucide-react";
+import { OutputReader } from "./output_reader.jsx";
 
 /* ============================================================
    PYOMO + IPOPT — CODE STEPPER TUTORIAL
@@ -546,183 +547,132 @@ export default function PyomoTutorial() {
         <StatePanel state={state} />
       </div>
 
-      <IPOPTOutputReader problemKey={problem.key} />
+      <OutputReader
+        title="Reading the IPOPT iteration log, column by column"
+        intro="With tee=True, Pyomo streams IPOPT's per-iteration log straight to stdout. All ten columns are documented below — click Next (or any card) to step through them. The corresponding column highlights live in the table and the textbox at the bottom describes what that column did on THIS specific solve."
+        columns={IPOPT_COLS}
+        logs={IPOPT_LOGS}
+        problemKey={problem.key}
+      />
       <PedagogicalNotes />
     </div>
   );
 }
 
 // ============================================================
-// IPOPT output reader — explains the iter table in print_level=5
+// Output reader — column data for IPOPT
 // ============================================================
+const IPOPT_COLS = [
+  { key: "iter", label: "iter", def: "Iteration counter. Iter 0 = initial point (no step taken). Increases by one per ACCEPTED step; rejected line-search trials don't count." },
+  { key: "objective", label: "objective", def: "Current value of f(x). For Minimize this can move up OR down — IPOPT temporarily raises f(x) when the initial point is infeasible and the equality constraint pulls it." },
+  { key: "inf_pr", label: "inf_pr", def: "Primal infeasibility — max violation of equality + inequality constraints. Zero = feasible. Should drive to ≲1e−8 by the end. Stuck large = likely infeasible." },
+  { key: "inf_du", label: "inf_du", def: "Dual infeasibility — KKT-stationarity residual ‖∇f − Aᵀλ‖∞. Drives to zero. If it stalls but inf_pr is zero, the problem may be degenerate." },
+  { key: "lg_mu", label: "lg(mu)", def: "log₁₀(barrier parameter μ). IPOPT lowers μ in stages: starts at −1 (μ = 0.1), ends at −8.6 (μ ≈ 2.5e−9). Each drop is a barrier-update step." },
+  { key: "norm_d", label: "‖d‖", def: "Newton step size. Large at first (big moves), tiny at the end (polishing). If ‖d‖ stays tiny but inf_pr/inf_du don't move, the linear system is ill-conditioned." },
+  { key: "lg_rg", label: "lg(rg)", def: "log₁₀ of the regularization added to the Hessian to make it positive-definite. '−' = no regularization needed. Large values flag nonconvexity in the Lagrangian." },
+  { key: "alpha_du", label: "alpha_du", def: "Step length accepted along the dual variables. 1.0 = full step. Smaller = the line search rejected the full Newton step." },
+  { key: "alpha_pr", label: "alpha_pr", def: "Step length along primal variables. Trailing letter is the LINE-SEARCH FLAG: 'f' full step, 'h' second-order correction, 's' soft-restoration, 'R' restoration, 'w' watchdog. 'h'/'R' mean working harder than usual." },
+  { key: "ls", label: "ls", def: "Number of line-search backtracks. 1 = the first trial was accepted. >1 means IPOPT had to shrink the step before accepting." },
+];
+
 const IPOPT_LOGS = {
   qp: {
     rows: [
-      "iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls",
-      "   0  3.5000000e+00 0.00e+00 5.00e-01  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0",
-      "   1  2.4127510e+00 0.00e+00 1.21e+00  -1.0 7.05e-01    -  4.07e-01 1.00e+00f  1",
-      "   5  2.0000041e+00 0.00e+00 1.84e-04  -3.8 9.20e-04    -  9.95e-01 1.00e+00f  1",
-      "  10  2.0000000e+00 0.00e+00 1.30e-09  -8.6 1.10e-07    -  1.00e+00 1.00e+00f  1",
+      { cells: { iter: "  0", objective: "3.5000000e+00", inf_pr: "0.00e+00", inf_du: "5.00e-01", lg_mu: "-1.0", norm_d: "0.00e+00", lg_rg: "-", alpha_du: "0.00e+00", alpha_pr: "0.00e+00", ls: "0" } },
+      { cells: { iter: "  1", objective: "2.4127510e+00", inf_pr: "0.00e+00", inf_du: "1.21e+00", lg_mu: "-1.0", norm_d: "7.05e-01", lg_rg: "-", alpha_du: "4.07e-01", alpha_pr: "1.00e+00f", ls: "1" } },
+      { cells: { iter: "  5", objective: "2.0000041e+00", inf_pr: "0.00e+00", inf_du: "1.84e-04", lg_mu: "-3.8", norm_d: "9.20e-04", lg_rg: "-", alpha_du: "9.95e-01", alpha_pr: "1.00e+00f", ls: "1" } },
+      { cells: { iter: " 10", objective: "2.0000000e+00", inf_pr: "0.00e+00", inf_du: "1.30e-09", lg_mu: "-8.6", norm_d: "1.10e-07", lg_rg: "-", alpha_du: "1.00e+00", alpha_pr: "1.00e+00f", ls: "1" } },
     ],
-    summary:
-      "Number of Iterations....: 12\n\nNumber of objective function evaluations             = 13\nNumber of objective gradient evaluations             = 13\nNumber of equality constraint evaluations            = 0\nNumber of inequality constraint evaluations          = 13\nTotal CPU secs in IPOPT (w/o function evaluations)   = 0.014\nEXIT: Optimal Solution Found.",
-    interpretation:
-      "Closest-feasible-point QP. 12 iterations, the objective drops 3.5 → 2.4 → 2.0. inf_pr (primal infeasibility) is zero from the start — the initial point (0.5, 0.5) is feasible. inf_du shrinks from 5e−1 to 1.3e−9 — that's the KKT-stationarity residual closing. lg(mu) starts at −1 (μ = 0.1) and ramps to −8.6 (μ ≈ 2.5e−9) — IPOPT pushed the barrier all the way down. 'f' on the alpha_pr column = a 'full' Newton step was accepted; 'h' or 'r' would mean second-order corrections kicked in.",
+    summary: "Number of Iterations....: 12\n\nNumber of objective function evaluations             = 13\nNumber of objective gradient evaluations             = 13\nNumber of equality constraint evaluations            = 0\nNumber of inequality constraint evaluations          = 13\nTotal CPU secs in IPOPT (w/o function evaluations)   = 0.014\nEXIT: Optimal Solution Found.",
+    finalSummary:
+      "Closest-feasible-point QP. 12 iterations, the objective drops 3.5 → 2.4 → 2.0. Initial point (0.5, 0.5) is feasible so inf_pr stays at zero. KKT residual closes from 5e−1 to 1.3e−9, μ from 0.1 to 2.5e−9. Every accepted step was a full Newton step — that's why every alpha_pr ends in 'f'.",
+    perCol: {
+      iter: "0, 1, 5, 10 — IPOPT prints sparingly. Twelve total iterations.",
+      objective: "3.5 → 2.41 → 2.00 → 2.00. Monotone decrease (objective is convex). Locks in by iter 5.",
+      inf_pr: "All zeros. Initial (0.5, 0.5) sits inside the feasible polytope; every iterate stays inside. Healthy.",
+      inf_du: "0.5 → 1.21 → 1.8e−4 → 1.3e−9. Notice it INCREASED at iter 1 — IPOPT reduces the barrier and the dual residual gets temporarily worse. This is normal and expected.",
+      lg_mu: "−1 → −1 → −3.8 → −8.6. Three barrier-update phases visible. μ shrinks from 0.1 to ~2.5e−9.",
+      norm_d: "0 → 0.71 → 9e−4 → 1e−7. Big first step, then exponential decay. The 1e−7 last step is just polishing.",
+      lg_rg: "'−' on every row — no Hessian regularization needed. Convex QP, the Hessian is naturally PD.",
+      alpha_du: "0 → 0.41 → 0.99 → 1.00. Started cautious (only 41% of the dual step), accelerated to full steps once inside the central neighborhood.",
+      alpha_pr: "All ending in 'f' — full Newton steps on the primal side. No second-order corrections needed.",
+      ls: "All 1's. First line-search trial accepted every time. Smooth ride.",
+    },
   },
   disk: {
     rows: [
-      "iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls",
-      "   0  4.2500000e+00 0.00e+00 4.00e+00  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0",
-      "   2  1.4071250e+00 0.00e+00 7.10e-01  -1.0 9.50e-01    -  3.20e-01 1.00e+00f  1",
-      "   5  1.0001530e+00 0.00e+00 6.31e-04  -3.8 4.20e-03    -  9.94e-01 1.00e+00f  1",
-      "   9  1.0000000e+00 0.00e+00 1.05e-09  -8.6 9.50e-08    -  1.00e+00 1.00e+00f  1",
-      "Number of Iterations....: 9",
+      { cells: { iter: "  0", objective: "4.2500000e+00", inf_pr: "0.00e+00", inf_du: "4.00e+00", lg_mu: "-1.0", norm_d: "0.00e+00", lg_rg: "-", alpha_du: "0.00e+00", alpha_pr: "0.00e+00", ls: "0" } },
+      { cells: { iter: "  2", objective: "1.4071250e+00", inf_pr: "0.00e+00", inf_du: "7.10e-01", lg_mu: "-1.0", norm_d: "9.50e-01", lg_rg: "-", alpha_du: "3.20e-01", alpha_pr: "1.00e+00f", ls: "1" } },
+      { cells: { iter: "  5", objective: "1.0001530e+00", inf_pr: "0.00e+00", inf_du: "6.31e-04", lg_mu: "-3.8", norm_d: "4.20e-03", lg_rg: "-", alpha_du: "9.94e-01", alpha_pr: "1.00e+00f", ls: "1" } },
+      { cells: { iter: "  9", objective: "1.0000000e+00", inf_pr: "0.00e+00", inf_du: "1.05e-09", lg_mu: "-8.6", norm_d: "9.50e-08", lg_rg: "-", alpha_du: "1.00e+00", alpha_pr: "1.00e+00f", ls: "1" } },
     ],
     summary: "Number of objective function evaluations             = 10\nNumber of objective gradient evaluations             = 10\nNumber of inequality constraint evaluations          = 10\nTotal CPU secs in IPOPT (w/o function evaluations)   = 0.011\nEXIT: Optimal Solution Found.",
-    interpretation:
-      "Disk projection. The interesting column is ||d|| — the Newton step length. It starts at 0.95 (a big move from x=2 toward the origin), then shrinks to 1e−7 in the final iteration as IPOPT polishes the answer at the disk boundary. Notice inf_pr stays exactly 0 throughout — every iterate stays feasible, which is what an interior-point method does for inequality constraints.",
+    finalSummary:
+      "Disk projection. Nine iterations, no equalities to wrestle with. The interesting story is in ‖d‖ — starts at 0.95 (a big move from x=2 toward the origin), shrinks to 1e−7 at the end. inf_pr stays exactly zero throughout — every iterate remains feasible (the disk constraint), which is what an interior-point method does for inequality constraints.",
+    perCol: {
+      iter: "0, 2, 5, 9. Nine total iterations.",
+      objective: "4.25 → 1.41 → 1.00 → 1.00. Monotone decrease. Distance² from origin goes 4.25 → 1.0.",
+      inf_pr: "All zeros. The initial point (2, 0.5) is strictly inside the disk; every iterate stays inside. This is THE distinguishing feature of interior-point methods on inequality-only problems.",
+      inf_du: "4 → 0.71 → 6e−4 → 1e−9. KKT residual closes ten orders of magnitude.",
+      lg_mu: "−1 → −1 → −3.8 → −8.6. Standard schedule.",
+      norm_d: "0 → 0.95 → 4e−3 → 1e−7. The 0.95 step is a HUGE move — that's IPOPT marching from (2, 0.5) toward the origin and hitting the boundary. The rest is polishing along the boundary.",
+      lg_rg: "'−' throughout. Clean convex problem.",
+      alpha_du: "0 → 0.32 → 0.99 → 1.00. Started cautious, accelerated. Mirror of the QP pattern.",
+      alpha_pr: "All 'f' (full steps). No corrections needed.",
+      ls: "All 1's. First trial always accepted.",
+    },
   },
   portfolio: {
     rows: [
-      "iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls",
-      "   0  1.4500000e-02 0.00e+00 1.20e-01  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0",
-      "   3  6.0123104e-03 0.00e+00 8.95e-03  -2.5 1.85e-01    -  9.10e-01 1.00e+00f  1",
-      "   8  5.4720410e-03 0.00e+00 4.10e-05  -5.7 2.40e-04    -  9.95e-01 1.00e+00f  1",
-      "  16  5.4710140e-03 1.11e-16 4.20e-09  -8.6 8.20e-08    -  1.00e+00 1.00e+00f  1",
-      "Number of Iterations....: 16",
+      { cells: { iter: "  0", objective: "1.4500000e-02", inf_pr: "0.00e+00", inf_du: "1.20e-01", lg_mu: "-1.0", norm_d: "0.00e+00", lg_rg: "-", alpha_du: "0.00e+00", alpha_pr: "0.00e+00", ls: "0" } },
+      { cells: { iter: "  3", objective: "6.0123104e-03", inf_pr: "0.00e+00", inf_du: "8.95e-03", lg_mu: "-2.5", norm_d: "1.85e-01", lg_rg: "-", alpha_du: "9.10e-01", alpha_pr: "1.00e+00f", ls: "1" } },
+      { cells: { iter: "  8", objective: "5.4720410e-03", inf_pr: "0.00e+00", inf_du: "4.10e-05", lg_mu: "-5.7", norm_d: "2.40e-04", lg_rg: "-", alpha_du: "9.95e-01", alpha_pr: "1.00e+00f", ls: "1" } },
+      { cells: { iter: " 16", objective: "5.4710140e-03", inf_pr: "1.11e-16", inf_du: "4.20e-09", lg_mu: "-8.6", norm_d: "8.20e-08", lg_rg: "-", alpha_du: "1.00e+00", alpha_pr: "1.00e+00f", ls: "1" } },
     ],
     summary: "Number of equality constraint evaluations            = 17\nNumber of inequality constraint evaluations          = 17\nTotal CPU secs in IPOPT (w/o function evaluations)   = 0.022\nEXIT: Optimal Solution Found.",
-    interpretation:
-      "Markowitz QP with both equality (budget) and inequality (return floor) constraints. inf_pr is 0 then 1.11e−16 (machine epsilon — that's the budget equality being satisfied to floating-point precision). 16 iterations is a bit more than the simpler QPs because the equality constraint adds another KKT row IPOPT has to drive to zero. lg(mu) progression −1 → −2.5 → −5.7 → −8.6 is textbook: μ shrinks by a factor of 10–1000 per phase.",
+    finalSummary:
+      "Markowitz QP with both equality (budget) and inequality (return floor) constraints. 16 iterations is more than the simpler QPs because the equality constraint adds a KKT row IPOPT has to drive to zero. Healthy lg(mu) progression: −1 → −2.5 → −5.7 → −8.6 (three barrier-update phases).",
+    perCol: {
+      iter: "0, 3, 8, 16 — slower convergence than the simpler QPs because the equality (budget) constraint pulls the iterate.",
+      objective: "0.0145 → 0.00601 → 0.00547 → 0.00547. Variance objective monotonically decreases.",
+      inf_pr: "0 → 0 → 0 → 1.11e−16. The 1e−16 is machine epsilon — that's the budget equality being satisfied to floating-point precision. Beautiful.",
+      inf_du: "0.12 → 9e−3 → 4e−5 → 4e−9. KKT residual closes nine orders of magnitude.",
+      lg_mu: "−1 → −2.5 → −5.7 → −8.6. THREE barrier phases, more than the 2-phase pattern in disk/qp. Equality constraints cost an extra phase.",
+      norm_d: "0 → 0.19 → 2.4e−4 → 8e−8. Clean exponential decay.",
+      lg_rg: "'−' throughout. Convex QP.",
+      alpha_du: "0 → 0.91 → 0.99 → 1.00. Aggressive from iter 3 onward. The dual moves nearly all the way each step.",
+      alpha_pr: "All 'f' (full primal steps).",
+      ls: "All 1's. No backtracking.",
+    },
   },
   hs71: {
     rows: [
-      "iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls",
-      "   0  1.6109693e+01 1.12e+01 5.28e-01  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0",
-      "   1  1.6537219e+01 7.89e-01 2.31e+00  -1.0 1.22e+00    -  3.05e-01 1.00e+00f  1",
-      "   2  1.7475176e+01 1.41e-02 4.92e-01  -1.0 1.94e-01    -  9.93e-01 1.00e+00h  1",
-      "   3  1.7039229e+01 5.05e-04 4.33e-02  -1.7 5.00e-02    -  9.92e-01 9.97e-01h  1",
-      "   5  1.7014017e+01 4.34e-08 7.65e-08  -3.8 7.36e-04    -  9.99e-01 1.00e+00h  1",
-      "   8  1.7014017e+01 5.55e-17 1.86e-11  -7.0 1.08e-07    -  1.00e+00 1.00e+00h  1",
-      "   9  1.7014017e+01 5.55e-17 2.51e-14  -8.6 4.71e-09    -  1.00e+00 1.00e+00h  1",
-      "Number of Iterations....: 9",
+      { cells: { iter: "  0", objective: "1.6109693e+01", inf_pr: "1.12e+01", inf_du: "5.28e-01", lg_mu: "-1.0", norm_d: "0.00e+00", lg_rg: "-", alpha_du: "0.00e+00", alpha_pr: "0.00e+00", ls: "0" } },
+      { cells: { iter: "  1", objective: "1.6537219e+01", inf_pr: "7.89e-01", inf_du: "2.31e+00", lg_mu: "-1.0", norm_d: "1.22e+00", lg_rg: "-", alpha_du: "3.05e-01", alpha_pr: "1.00e+00f", ls: "1" } },
+      { cells: { iter: "  2", objective: "1.7475176e+01", inf_pr: "1.41e-02", inf_du: "4.92e-01", lg_mu: "-1.0", norm_d: "1.94e-01", lg_rg: "-", alpha_du: "9.93e-01", alpha_pr: "1.00e+00h", ls: "1" } },
+      { cells: { iter: "  3", objective: "1.7039229e+01", inf_pr: "5.05e-04", inf_du: "4.33e-02", lg_mu: "-1.7", norm_d: "5.00e-02", lg_rg: "-", alpha_du: "9.92e-01", alpha_pr: "9.97e-01h", ls: "1" } },
+      { cells: { iter: "  5", objective: "1.7014017e+01", inf_pr: "4.34e-08", inf_du: "7.65e-08", lg_mu: "-3.8", norm_d: "7.36e-04", lg_rg: "-", alpha_du: "9.99e-01", alpha_pr: "1.00e+00h", ls: "1" } },
+      { cells: { iter: "  8", objective: "1.7014017e+01", inf_pr: "5.55e-17", inf_du: "1.86e-11", lg_mu: "-7.0", norm_d: "1.08e-07", lg_rg: "-", alpha_du: "1.00e+00", alpha_pr: "1.00e+00h", ls: "1" } },
+      { cells: { iter: "  9", objective: "1.7014017e+01", inf_pr: "5.55e-17", inf_du: "2.51e-14", lg_mu: "-8.6", norm_d: "4.71e-09", lg_rg: "-", alpha_du: "1.00e+00", alpha_pr: "1.00e+00h", ls: "1" } },
     ],
     summary:
       "Number of objective function evaluations             = 10\nNumber of objective gradient evaluations             = 10\nNumber of equality constraint evaluations            = 10\nNumber of inequality constraint Jacobian evaluations = 10\nNumber of Lagrangian Hessian evaluations             = 9\nTotal CPU secs in IPOPT (w/o function evaluations)   = 0.014\nEXIT: Optimal Solution Found.",
-    interpretation:
-      "HS71 — the textbook NLP. Initial point (1, 5, 5, 1) is INFEASIBLE: inf_pr = 11.2 (1 + 25 + 25 + 1 = 52 ≠ 40). IPOPT runs in 'restoration phase' or with feasibility-driven steps. By iter 2 inf_pr is 0.014 — the equality is nearly satisfied. 'h' on the alpha column means second-order corrections were applied to reduce the equality residual without giving up too much progress on the objective. Final inf_pr = 5.55e−17 (machine epsilon). Nine iterations matches IPOPT's documented HS71 reference exactly.",
+    finalSummary:
+      "HS71 — the canonical NLP benchmark. Initial point (1, 5, 5, 1) is INFEASIBLE: 1²+5²+5²+1² = 52, far from the required 40 → inf_pr = 11.2. Watch IPOPT pull the iterate toward the equality surface in two iterations, then chase the optimum. Nine iterations matches IPOPT's documented HS71 reference exactly.",
+    perCol: {
+      iter: "0 through 9. Seven printed rows shows the full trajectory because the early iterations are interesting (infeasibility, then 'h' corrections).",
+      objective: "16.1 → 16.5 → 17.5 → 17.0 → 17.01 → 17.01 → 17.01. Goes UP between iters 1 and 2 — that's IPOPT trading objective for feasibility. Then settles at 17.014 (the actual optimum).",
+      inf_pr: "11.2 → 0.79 → 0.014 → 5e−4 → 4e−8 → 5.55e−17 → 5.55e−17. The CRITICAL story for this problem. Initial infeasibility is huge; drops 14 orders of magnitude. The 5.55e−17 is machine epsilon — equality satisfied perfectly.",
+      inf_du: "0.53 → 2.31 → 0.49 → 0.04 → 7e−8 → 2e−11 → 2.5e−14. Notice it INCREASES at iter 1 — primal restoration temporarily worsens stationarity. By iter 3 it's tracking primal residual closely.",
+      lg_mu: "−1 → −1 → −1 → −1.7 → −3.8 → −7.0 → −8.6. IPOPT held μ steady at 0.1 for THREE iterations because it was busy fixing primal infeasibility. Once feasibility was secured, μ drops fast.",
+      norm_d: "0 → 1.22 → 0.19 → 0.05 → 7e−4 → 1e−7 → 5e−9. The 1.22 step at iter 1 is huge — IPOPT is sprinting toward the equality surface from the infeasible start.",
+      lg_rg: "'−' throughout. The HS71 Lagrangian Hessian is positive-definite at the iterates IPOPT visits, so no regularization is needed.",
+      alpha_du: "0 → 0.31 → 0.99 → 0.99 → 1.00 → 1.00 → 1.00. Started ultra-cautious, then aggressive once inside the feasible-by-tolerance neighborhood.",
+      alpha_pr: "0 → 'f' → 'h' → 'h' → 'h' → 'h' → 'h'. The 'h' flag means SECOND-ORDER CORRECTIONS were used to reduce the equality residual without giving up too much progress on the objective. This is what makes HS71 a good benchmark — it exercises the SOC pathway.",
+      ls: "All 1's. First trial always accepted, even with second-order corrections. IPOPT's filter-line-search is doing its job.",
+    },
   },
 };
-
-const IPOPT_COL_DEFS = [
-  { key: "iter", label: "iter", explain: "Iteration counter. Iter 0 is the initial point (no step taken yet). Iter increases by one per accepted step; rejected line-search trials don't count." },
-  { key: "objective", label: "objective", explain: "Current value of f(x). For Minimize this can move up OR down — IPOPT may temporarily increase f(x) to satisfy a constraint, especially when the initial point is infeasible." },
-  { key: "inf_pr", label: "inf_pr", explain: "Primal infeasibility — max violation of equality and inequality constraints. Zero means feasible. Should drive to ~1e−8 by the end. If it's stuck large, the problem may be infeasible." },
-  { key: "inf_du", label: "inf_du", explain: "Dual infeasibility — KKT-stationarity residual ‖∇f − Aᵀλ‖∞. Should also drive to zero. If it stalls and inf_pr is zero, you may have a degenerate problem." },
-  { key: "lg_mu", label: "lg(mu)", explain: "log₁₀(barrier parameter μ). IPOPT lowers μ in stages: starts at −1 (μ = 0.1), drops to −8.6 (μ ≈ 2.5e−9) by the end. Each drop in lg(mu) is a barrier-update step." },
-  { key: "norm_d", label: "‖d‖", explain: "Newton step size. Big at the beginning (you're moving fast), small at the end (you're polishing). If ‖d‖ stays tiny but inf_pr/inf_du don't move, the linear system is ill-conditioned." },
-  { key: "lg_rg", label: "lg(rg)", explain: "log₁₀ of the regularization added to the Hessian to make it positive-definite when needed. '−' means no regularization was needed (the Hessian was already PD). Large values signal nonconvexity in the Lagrangian." },
-  { key: "alpha_du", label: "alpha_du", explain: "Step length actually accepted along the dual variables. 1.0 = full step. Smaller means the line search rejected the full Newton step." },
-  { key: "alpha_pr", label: "alpha_pr", explain: "Step length accepted along primal variables. The trailing letter is the LINE-SEARCH FLAG: 'f' = full step, 'h' = second-order correction, 's' = soft-restoration, 'R' = restoration, 'w' = watchdog. 'h' and 'R' mean the iteration was working harder than usual." },
-  { key: "ls", label: "ls", explain: "Number of line-search backtracks. 1 = the first trial was accepted. >1 means IPOPT had to shrink the step before accepting." },
-];
-
-function IPOPTOutputReader({ problemKey }) {
-  const log = IPOPT_LOGS[problemKey];
-  const [hoverCol, setHoverCol] = useState(null);
-  if (!log) return null;
-  return (
-    <div style={{ marginTop: 28, padding: 18, border: "1px solid #d8d3c4", background: "#fdfaf1", borderRadius: 10 }}>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
-        Reading the IPOPT iteration log, column by column
-      </div>
-      <div style={{ fontSize: 13, color: "#555", lineHeight: 1.55, marginBottom: 12 }}>
-        With <code style={inlineCode}>tee=True</code>, Pyomo streams IPOPT's per-iteration log straight to stdout. Hover any header to see what each column means.
-      </div>
-
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
-        {IPOPT_COL_DEFS.map((c) => (
-          <button
-            key={c.key}
-            onMouseEnter={() => setHoverCol(c.key)}
-            onMouseLeave={() => setHoverCol(null)}
-            onClick={() => setHoverCol(hoverCol === c.key ? null : c.key)}
-            style={{
-              padding: "4px 9px",
-              fontSize: 11,
-              fontFamily: "monospace",
-              border: "1px solid #c8b76c",
-              borderRadius: 4,
-              background: hoverCol === c.key ? "#f5d68d" : "#fff",
-              cursor: "pointer",
-            }}
-          >
-            {c.label}
-          </button>
-        ))}
-      </div>
-
-      {hoverCol && (
-        <div
-          style={{
-            marginBottom: 12,
-            padding: "8px 12px",
-            background: "#fff8e1",
-            border: "1px solid #f5d68d",
-            borderRadius: 6,
-            fontSize: 13,
-            color: "#3d2f00",
-          }}
-        >
-          <b style={{ fontFamily: "monospace" }}>{IPOPT_COL_DEFS.find((c) => c.key === hoverCol).label}</b>
-          {": "}
-          {IPOPT_COL_DEFS.find((c) => c.key === hoverCol).explain}
-        </div>
-      )}
-
-      <pre
-        style={{
-          background: "#0d0d0d",
-          color: "#dadada",
-          padding: 12,
-          borderRadius: 6,
-          fontSize: 11,
-          fontFamily: "'JetBrains Mono', Menlo, monospace",
-          lineHeight: 1.55,
-          overflowX: "auto",
-          margin: 0,
-          whiteSpace: "pre",
-        }}
-      >
-        {log.rows.map((r, i) => (
-          <div key={i} style={{ color: i === 0 ? "#7dd87d" : "#dadada" }}>
-            {r}
-          </div>
-        ))}
-        <div style={{ color: "#5a5a5a", marginTop: 6 }}>—</div>
-        <div>{log.summary}</div>
-      </pre>
-
-      <div
-        style={{
-          marginTop: 12,
-          padding: "10px 14px",
-          background: "#fff",
-          border: "1px solid #ddd",
-          borderRadius: 6,
-          fontSize: 13,
-          lineHeight: 1.55,
-          color: "#222",
-        }}
-      >
-        <div style={{ fontFamily: "monospace", fontSize: 10, color: "#888", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 4 }}>
-          What this output is telling you
-        </div>
-        {log.interpretation}
-      </div>
-    </div>
-  );
-}
 
 // ============================================================
 // Install panel

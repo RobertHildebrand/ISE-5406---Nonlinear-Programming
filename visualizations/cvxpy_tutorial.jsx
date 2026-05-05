@@ -7,6 +7,7 @@ import {
   Terminal,
   Package,
 } from "lucide-react";
+import { OutputReader } from "./output_reader.jsx";
 
 /* ============================================================
    CVXPY — CODE STEPPER TUTORIAL
@@ -555,206 +556,151 @@ export default function CVXPYTutorial() {
         <StatePanel state={state} />
       </div>
 
-      <CVXPYOutputReader problemKey={problem.key} />
+      <OutputReader
+        title="Reading CLARABEL's output, column by column"
+        intro="With verbose=True, CLARABEL prints a per-iteration table while it climbs the central path. All nine columns are documented below — click Next (or any card) to step through them. The corresponding column lights up in the table and the textbox at the bottom tells you what that column did on THIS specific solve."
+        columns={CVXPY_COLS}
+        logs={CVXPY_LOGS}
+        problemKey={problem.key}
+      />
       <PedagogicalNotes />
     </div>
   );
 }
 
 // ============================================================
-// CVXPY OUTPUT READER — explains CLARABEL's verbose iteration log
+// Output reader — column data for CLARABEL
 // ============================================================
-const CVXPY_LOGS = {
-  lp: {
-    title: "CLARABEL log for the LP",
-    setup: "problem\n  variables     = 2\n  constraints   = 3 (linear inequalities) + 2 (variable nonneg)\n  cones         = 5 nonneg-orthant components\n  ----------------------\n  Status: solving",
-    header: "iter    pcost        dcost         gap       pres      dres      k/t        μ      step",
-    rows: [
-      "  0  +0.0000e+00  -0.0000e+00  0.00e+00  3.00e+00  1.05e+00  1.00e+00  1.00e+00  ----",
-      "  1  -1.5234e+00  -2.0501e+00  5.27e-01  9.21e-02  6.42e-02  6.30e-02  9.85e-02  4.51e-01",
-      "  5  -2.0498e+00  -2.0500e+00  2.31e-04  4.21e-05  6.04e-06  9.05e-06  1.49e-05  9.10e-01",
-      " 10  -2.0500e+00  -2.0500e+00  9.50e-09  1.83e-09  2.40e-10  1.10e-10  6.16e-11  9.95e-01",
-    ],
-    summary:
-      "terminated: optimal\nsolve time:    0.005 sec\nprimal obj :   -2.0500\ndual obj   :   -2.0500\ngap        :    9.5e-09\n",
-    interpretation:
-      "Standard primal-dual interior-point output from CLARABEL. Each row is one Newton step on the central path. Gap (pcost − dcost) shrinks geometrically once you're inside the central neighborhood — that's why iter 5 already has 4 digits and iter 10 has 9. pres/dres are the primal/dual residuals (how far from the constraints/KKT); both go to zero. k/t is the homogeneous embedding's complementarity (you can ignore it unless you're debugging infeasibility).",
-  },
-  qp: {
-    title: "CLARABEL log for the QP",
-    setup: "problem\n  variables     = 4\n  constraints   = 4 nonneg + 1 ineq + 1 eq\n  cones         = 5 nonneg-orthant + 1 zero\n  PSD blocks    = 1 (4×4 from quad_form)\n  ----------------------\n  Status: solving",
-    header: "iter    pcost         dcost         gap       pres      dres      k/t       μ        step",
-    rows: [
-      "  0  +0.0000e+00  +0.0000e+00  0.00e+00  1.00e+00  1.20e-01  1.00e+00  1.00e+00  ----",
-      "  3  +5.5000e-03  +5.4502e-03  4.98e-05  3.10e-04  6.20e-05  1.10e-04  4.55e-05  8.92e-01",
-      "  9  +5.4710e-03  +5.4710e-03  1.40e-08  4.40e-09  9.10e-10  6.10e-10  3.00e-10  9.95e-01",
-      " 13  +5.4710e-03  +5.4710e-03  3.40e-11  1.00e-11  3.10e-12  1.00e-12  9.00e-13  9.99e-01",
-    ],
-    summary:
-      "terminated: optimal\nsolve time:    0.008 sec\nprimal obj :    0.005471\ndual obj   :    0.005471\ngap        :    3.4e-11",
-    interpretation:
-      "QP via cp.quad_form gets canonicalized into a small SOCP using a Schur-complement trick — that's why CLARABEL reports a PSD/SOC block. 13 iterations is typical for a strongly convex QP. Notice the primal-dual gap narrows monotonically; CLARABEL's stopping rule is 'all four of gap, pres, dres, k/t under tol'.",
-  },
-  socp: {
-    title: "CLARABEL log for the SOCP",
-    setup: "problem\n  variables     = 2\n  cones         = 1 SOC (size 3)\n  ----------------------\n  Status: solving",
-    header: "iter    pcost         dcost         gap       pres      dres      k/t       μ        step",
-    rows: [
-      "  0  +0.0000e+00  +0.0000e+00  0.00e+00  1.00e+00  1.00e+00  1.00e+00  1.00e+00  ----",
-      "  2  -3.4123e+00  -3.4189e+00  6.55e-03  4.10e-03  9.20e-04  3.30e-04  4.04e-04  6.78e-01",
-      "  6  -3.4142e+00  -3.4142e+00  1.91e-06  3.50e-07  1.00e-07  4.00e-08  1.91e-08  9.85e-01",
-      " 11  -3.4142e+00  -3.4142e+00  9.20e-12  4.10e-12  6.20e-13  9.10e-14  4.50e-14  9.99e-01",
-    ],
-    summary:
-      "terminated: optimal\nsolve time:    0.006 sec\nprimal obj :   -3.4142\ndual obj   :   -3.4142\ngap        :    9.2e-12",
-    interpretation:
-      "SOCP — one second-order cone of size n+1 = 3. The single cone makes this very fast. Optimum −2√2 = −3.4142 hits the SOC boundary; CLARABEL's central path approached it from inside the cone, which is why pres / dres are about the same order of magnitude (no 'easy' face to slide along).",
-  },
-  sdp: {
-    title: "CLARABEL log for the SDP",
-    setup: "problem\n  variables     = 1 (X, 2×2 symmetric → 3 free entries)\n  cones         = 1 PSD (size 2) + 1 zero (trace eq)\n  ----------------------\n  Status: solving",
-    header: "iter    pcost         dcost         gap       pres      dres      k/t       μ        step",
-    rows: [
-      "  0  +0.0000e+00  +0.0000e+00  0.00e+00  1.00e+00  2.10e-01  1.00e+00  1.00e+00  ----",
-      "  6  +0.7950e+00  +0.7901e+00  4.92e-03  9.10e-04  3.20e-04  1.20e-04  3.10e-04  7.20e-01",
-      " 12  +0.7929e+00  +0.7929e+00  9.85e-08  4.20e-08  1.00e-08  9.30e-09  3.05e-09  9.50e-01",
-      " 18  +0.7929e+00  +0.7929e+00  4.10e-12  3.30e-12  4.20e-13  6.10e-14  3.00e-14  9.97e-01",
-    ],
-    summary:
-      "terminated: optimal\nsolve time:    0.012 sec\nprimal obj :    0.7929\ndual obj   :    0.7929\ngap        :    4.1e-12",
-    interpretation:
-      "SDP solves are slower per iteration (the PSD cone projection is an eigendecomposition every Newton step) but converge in similar numbers of iterations. 18 iterations is typical for a 2×2 SDP. The objective 0.7929 = (3 − √2)/2 is the smaller eigenvalue of C — exactly what the SDP relaxation of an eigenvalue problem returns.",
-  },
-  logreg: {
-    title: "CLARABEL log for sparse logistic regression",
-    setup: "problem\n  variables     = 9 (β:8, b:1) + auxiliary u:8 (for ‖β‖₁) + s:50 (for cp.logistic)\n  cones         = 8 ExpCone (size 3 each, for log-sum-exp)\n              + 16 nonneg (for u ≥ ±β)\n              + 1 zero (offset)\n  ----------------------\n  Status: solving",
-    header: "iter    pcost         dcost         gap       pres      dres      k/t       μ        step",
-    rows: [
-      "  0  +0.0000e+00  +0.0000e+00  0.00e+00  1.50e+01  3.00e+00  1.00e+00  1.00e+00  ----",
-      "  4  +1.7012e+01  +1.6905e+01  1.07e-02  4.23e-02  1.10e-02  3.20e-03  6.10e-03  6.50e-01",
-      " 10  +1.6843e+01  +1.6841e+01  2.80e-04  9.10e-05  4.20e-05  1.10e-05  2.05e-05  9.10e-01",
-      " 16  +1.6842e+01  +1.6842e+01  3.10e-08  9.20e-09  4.10e-09  3.30e-10  1.05e-09  9.95e-01",
-      " 22  +1.6842e+01  +1.6842e+01  4.20e-12  3.10e-12  6.05e-13  4.10e-14  9.05e-14  9.99e-01",
-    ],
-    summary:
-      "terminated: optimal\nsolve time:    0.026 sec\nprimal obj :   16.842\ndual obj   :   16.842\ngap        :    4.2e-12",
-    interpretation:
-      "Now you can see the cost of the exponential cone. 22 iterations vs ~10 for the LP — exp-cone projections are nonlinear and CLARABEL needs more Newton steps. Notice the SETUP block: 50 sample log-losses ⇒ 50 ExpCones, plus 16 nonneg constraints from the L1 reformulation. The variable count CVXPY reports (9) is misleading — internally there are 9 + 8 + 50 = 67 free variables. That's normal for non-smooth + exp-cone problems.",
-  },
-};
-
-const CVXPY_COL_DEFS = [
-  { key: "iter", label: "iter", explain: "Newton-step iteration count along the central path. Typical convex conic problems converge in 10–30 iterations regardless of size. If iter is climbing past 50 you have either ill-conditioning, looseness in tolerance, or a near-infeasible problem." },
-  { key: "pcost", label: "pcost", explain: "Primal objective at the current iterate. For Minimize this approaches the optimum from above. It's the number you'd report as the 'answer' if you had to stop early." },
-  { key: "dcost", label: "dcost", explain: "Dual objective. For Minimize, dcost ≤ optimum ≤ pcost. Their difference is the duality gap — the certificate of optimality." },
-  { key: "gap", label: "gap", explain: "Relative duality gap (pcost − dcost) / max(1, |pcost|). The headline 'how close are we' number. 1e-8 is fine for production; 1e-6 is fine for ML." },
-  { key: "pres", label: "pres", explain: "Primal residual: ‖A x − b‖ / scale. Measures constraint violation. Should reach zero at the optimum." },
-  { key: "dres", label: "dres", explain: "Dual residual: how badly the KKT-stationarity condition is violated. Drops to zero alongside pres." },
-  { key: "kt", label: "k/t", explain: "Homogeneous-self-dual model's complementarity (κ·τ). Important when detecting infeasibility — diverges instead of going to zero. Otherwise just a sanity check." },
-  { key: "mu", label: "μ", explain: "Central-path barrier parameter. CLARABEL drives μ → 0 to push the iterate toward the cone boundary (= the optimum). Closely tied to the step size." },
-  { key: "step", label: "step", explain: "Damped Newton step length. 1.0 = full Newton step (you're in the quadratic-convergence basin). < 0.5 means CLARABEL's still being cautious near the cones." },
+const CVXPY_COLS = [
+  { key: "iter", label: "iter", def: "Newton-step iteration along the central path. Typical convex conic problems converge in 10–30 iterations regardless of size. If iter exceeds 50, you likely have ill-conditioning or near-infeasibility." },
+  { key: "pcost", label: "pcost", def: "Primal objective at the current iterate. For Minimize this approaches the optimum from above. It's the number you'd report if forced to stop early." },
+  { key: "dcost", label: "dcost", def: "Dual objective. For Minimize, dcost ≤ optimum ≤ pcost. Their difference is the duality gap — the certificate of optimality." },
+  { key: "gap", label: "gap", def: "Relative duality gap (pcost − dcost) / max(1, |pcost|). Headline 'how close' number. 1e-8 = production tolerance; 1e-6 fine for ML." },
+  { key: "pres", label: "pres", def: "Primal residual: ‖Ax − b‖ scaled. Measures constraint violation. Should drive to zero at the optimum." },
+  { key: "dres", label: "dres", def: "Dual residual: KKT-stationarity violation ‖∇L‖. Drops to zero alongside pres." },
+  { key: "kt", label: "k/t", def: "Homogeneous embedding's complementarity (κτ). Diverges if the problem is infeasible — the canonical infeasibility certificate. Otherwise just a sanity check." },
+  { key: "mu", label: "μ", def: "Central-path barrier parameter. CLARABEL drives μ → 0 to push the iterate toward the cone boundary (= the optimum). Tied to step size." },
+  { key: "step", label: "step", def: "Damped Newton step length. 1.0 = full Newton step (quadratic-convergence basin). < 0.5 means CLARABEL is staying cautious near the cones." },
 ];
 
-function CVXPYOutputReader({ problemKey }) {
-  const log = CVXPY_LOGS[problemKey];
-  const [hoverCol, setHoverCol] = useState(null);
-  if (!log) return null;
-  return (
-    <div style={{ marginTop: 28, padding: 18, border: "1px solid #d8d3c4", background: "#fdfaf1", borderRadius: 10 }}>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
-        Reading CLARABEL's output, column by column
-      </div>
-      <div style={{ fontSize: 13, color: "#555", lineHeight: 1.55, marginBottom: 12 }}>
-        With <code style={inlineCode}>verbose=True</code>, CLARABEL prints a per-iteration table while it climbs the central path. Hover the headers below to see what each column means.
-      </div>
-
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
-        {CVXPY_COL_DEFS.map((c) => (
-          <button
-            key={c.key}
-            onMouseEnter={() => setHoverCol(c.key)}
-            onMouseLeave={() => setHoverCol(null)}
-            onClick={() => setHoverCol(hoverCol === c.key ? null : c.key)}
-            style={{
-              padding: "4px 9px",
-              fontSize: 11,
-              fontFamily: "monospace",
-              border: "1px solid #c8b76c",
-              borderRadius: 4,
-              background: hoverCol === c.key ? "#f5d68d" : "#fff",
-              cursor: "pointer",
-            }}
-          >
-            {c.label}
-          </button>
-        ))}
-      </div>
-
-      {hoverCol && (
-        <div
-          style={{
-            marginBottom: 12,
-            padding: "8px 12px",
-            background: "#fff8e1",
-            border: "1px solid #f5d68d",
-            borderRadius: 6,
-            fontSize: 13,
-            color: "#3d2f00",
-          }}
-        >
-          <b style={{ fontFamily: "monospace" }}>{CVXPY_COL_DEFS.find((c) => c.key === hoverCol).label}</b>
-          {": "}
-          {CVXPY_COL_DEFS.find((c) => c.key === hoverCol).explain}
-        </div>
-      )}
-
-      <div style={{ fontFamily: "monospace", fontSize: 11, color: "#888", marginBottom: 4 }}>
-        ── {log.title} ──
-      </div>
-      <pre
-        style={{
-          background: "#0d0d0d",
-          color: "#dadada",
-          padding: 12,
-          borderRadius: 6,
-          fontSize: 11,
-          fontFamily: "'JetBrains Mono', Menlo, monospace",
-          lineHeight: 1.55,
-          overflowX: "auto",
-          margin: 0,
-          whiteSpace: "pre",
-        }}
-      >
-        <div style={{ color: "#7f7864" }}>{log.setup}</div>
-        <div style={{ color: "#5a5a5a", marginTop: 4 }}>—</div>
-        <div style={{ color: "#7dd87d" }}>{log.header}</div>
-        {log.rows.map((row, i) => (
-          <div key={i}>{row}</div>
-        ))}
-        <div style={{ color: "#5a5a5a", marginTop: 6 }}>—</div>
-        <div>{log.summary}</div>
-      </pre>
-
-      <div
-        style={{
-          marginTop: 12,
-          padding: "10px 14px",
-          background: "#fff",
-          border: "1px solid #ddd",
-          borderRadius: 6,
-          fontSize: 13,
-          lineHeight: 1.55,
-          color: "#222",
-        }}
-      >
-        <div style={{ fontFamily: "monospace", fontSize: 10, color: "#888", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 4 }}>
-          What this output is telling you
-        </div>
-        {log.interpretation}
-      </div>
-    </div>
-  );
-}
+const CVXPY_LOGS = {
+  lp: {
+    setupText: "problem\n  variables     = 2\n  constraints   = 3 (linear inequalities) + 2 (variable nonneg)\n  cones         = 5 nonneg-orthant components\n  ----------------------\n  Status: solving",
+    rows: [
+      { cells: { iter: "  0", pcost: "+0.0000e+00", dcost: "-0.0000e+00", gap: "0.00e+00", pres: "3.00e+00", dres: "1.05e+00", kt: "1.00e+00", mu: "1.00e+00", step: "----" } },
+      { cells: { iter: "  1", pcost: "-1.5234e+00", dcost: "-2.0501e+00", gap: "5.27e-01", pres: "9.21e-02", dres: "6.42e-02", kt: "6.30e-02", mu: "9.85e-02", step: "4.51e-01" } },
+      { cells: { iter: "  5", pcost: "-2.0498e+00", dcost: "-2.0500e+00", gap: "2.31e-04", pres: "4.21e-05", dres: "6.04e-06", kt: "9.05e-06", mu: "1.49e-05", step: "9.10e-01" } },
+      { cells: { iter: " 10", pcost: "-2.0500e+00", dcost: "-2.0500e+00", gap: "9.50e-09", pres: "1.83e-09", dres: "2.40e-10", kt: "1.10e-10", mu: "6.16e-11", step: "9.95e-01" } },
+    ],
+    summary: "terminated: optimal\nsolve time:    0.005 sec\nprimal obj :   -2.0500\ndual obj   :   -2.0500\ngap        :    9.5e-09",
+    finalSummary:
+      "Textbook LP convergence on CLARABEL's central path. Quadratic convergence kicks in by iteration 5, giving four extra digits of accuracy in five iterations. Total cost: 10 Newton steps, 5 ms.",
+    perCol: {
+      iter: "Four sample rows: 0, 1, 5, 10. CLARABEL prints one row per Newton step. The iter column lets you compare Newton-step counts across problems — 10 here, vs 22 for sparse logreg.",
+      pcost: "0 → −1.52 → −2.05 → −2.05. Climbs into the optimum (well, descends — we're minimizing). Locked in by iter 5.",
+      dcost: "0 → −2.05 → −2.05 → −2.05. The dual converges FASTER than the primal here — typical for LPs with simple geometry.",
+      gap: "0 → 0.53 → 2.3e−4 → 9.5e−9. Quadratic shrinkage once we're inside the central neighborhood. Each row drops the gap by 4–5 orders of magnitude.",
+      pres: "3 → 9e−2 → 4e−5 → 2e−9. Constraints are well satisfied by the end. The first iter has pres = 3 because the initial point isn't feasible — interior-point methods accept that.",
+      dres: "1 → 6e−2 → 6e−6 → 2e−10. KKT-stationarity drops monotonically. Dual residual closes faster than primal — a clean LP.",
+      kt: "1 → 6e−2 → 9e−6 → 1e−10. Decreasing — confirms the problem is feasible and bounded. (Diverging k/t would mean infeasible.)",
+      mu: "1 → 0.099 → 1.5e−5 → 6e−11. Each barrier-update step reduces μ by ~3 orders of magnitude. Standard schedule.",
+      step: "---- → 0.45 → 0.91 → 1.00. Started cautious (45% Newton step) and grew to full step by the end — meaning the iterate is now in the quadratic basin and CLARABEL trusts the Newton direction completely.",
+    },
+  },
+  qp: {
+    setupText: "problem\n  variables     = 4\n  constraints   = 4 nonneg + 1 ineq + 1 eq\n  cones         = 5 nonneg-orthant + 1 zero\n  PSD blocks    = 1 (4×4 from quad_form)\n  ----------------------\n  Status: solving",
+    rows: [
+      { cells: { iter: "  0", pcost: "+0.0000e+00", dcost: "+0.0000e+00", gap: "0.00e+00", pres: "1.00e+00", dres: "1.20e-01", kt: "1.00e+00", mu: "1.00e+00", step: "----" } },
+      { cells: { iter: "  3", pcost: "+5.5000e-03", dcost: "+5.4502e-03", gap: "4.98e-05", pres: "3.10e-04", dres: "6.20e-05", kt: "1.10e-04", mu: "4.55e-05", step: "8.92e-01" } },
+      { cells: { iter: "  9", pcost: "+5.4710e-03", dcost: "+5.4710e-03", gap: "1.40e-08", pres: "4.40e-09", dres: "9.10e-10", kt: "6.10e-10", mu: "3.00e-10", step: "9.95e-01" } },
+      { cells: { iter: " 13", pcost: "+5.4710e-03", dcost: "+5.4710e-03", gap: "3.40e-11", pres: "1.00e-11", dres: "3.10e-12", kt: "1.00e-12", mu: "9.00e-13", step: "9.99e-01" } },
+    ],
+    summary: "terminated: optimal\nsolve time:    0.008 sec\nprimal obj :    0.005471\ndual obj   :    0.005471\ngap        :    3.4e-11",
+    finalSummary:
+      "Markowitz QP. CLARABEL canonicalizes quad_form into a small SOCP via a Schur-complement trick — that's why the setup block reports a PSD/SOC block. 13 iterations is typical for a strongly convex QP.",
+    perCol: {
+      iter: "0, 3, 9, 13 — CLARABEL prints sparingly here because the problem is small.",
+      pcost: "0 → 5.5e−3 → 5.471e−3 → 5.471e−3. Monotone DECREASE (we're minimizing variance) once we're inside the cone.",
+      dcost: "0 → 5.45e−3 → 5.471e−3 → 5.471e−3. Climbs from below; meets pcost at iter 9.",
+      gap: "0 → 5e−5 → 1.4e−8 → 3.4e−11. Three orders of magnitude per row pair. Strongly convex QPs converge fastest.",
+      pres: "1 → 3e−4 → 4e−9 → 1e−11. Clean convergence — equality constraints (Σwᵢ = 1) and inequalities all satisfied to machine precision.",
+      dres: "0.12 → 6e−5 → 9e−10 → 3e−12. Dual residual smaller than primal residual at every iteration — the strong-convexity prior is doing work.",
+      kt: "1 → 1e−4 → 6e−10 → 1e−12. Drops fast; QP is feasible and bounded.",
+      mu: "1 → 4.5e−5 → 3e−10 → 9e−13. Big drops between rows, especially between iter 3 and 9 — the centering phase is short for a well-conditioned QP.",
+      step: "---- → 0.89 → 0.99 → 1.00. Almost-full steps from iter 3 onward. Strongly convex objective gives huge Newton-step trust.",
+    },
+  },
+  socp: {
+    setupText: "problem\n  variables     = 2\n  cones         = 1 SOC (size 3)\n  ----------------------\n  Status: solving",
+    rows: [
+      { cells: { iter: "  0", pcost: "+0.0000e+00", dcost: "+0.0000e+00", gap: "0.00e+00", pres: "1.00e+00", dres: "1.00e+00", kt: "1.00e+00", mu: "1.00e+00", step: "----" } },
+      { cells: { iter: "  2", pcost: "-3.4123e+00", dcost: "-3.4189e+00", gap: "6.55e-03", pres: "4.10e-03", dres: "9.20e-04", kt: "3.30e-04", mu: "4.04e-04", step: "6.78e-01" } },
+      { cells: { iter: "  6", pcost: "-3.4142e+00", dcost: "-3.4142e+00", gap: "1.91e-06", pres: "3.50e-07", dres: "1.00e-07", kt: "4.00e-08", mu: "1.91e-08", step: "9.85e-01" } },
+      { cells: { iter: " 11", pcost: "-3.4142e+00", dcost: "-3.4142e+00", gap: "9.20e-12", pres: "4.10e-12", dres: "6.20e-13", kt: "9.10e-14", mu: "4.50e-14", step: "9.99e-01" } },
+    ],
+    summary: "terminated: optimal\nsolve time:    0.006 sec\nprimal obj :   -3.4142\ndual obj   :   -3.4142\ngap        :    9.2e-12",
+    finalSummary:
+      "Single second-order cone of size n+1 = 3. Optimum −2√2 = −3.4142 sits on the SOC boundary. The central path approached it from inside the cone — pres and dres stay roughly equal, which is why this took 11 iters not 7.",
+    perCol: {
+      iter: "0, 2, 6, 11 — slightly more iterations than the LP because cone projections (rather than orthant projections) are the operation per Newton step.",
+      pcost: "Lands at −3.4142 (= −2√2) by iter 6 and stays there. The optimum is on the SOC boundary.",
+      dcost: "Same answer from below. Equal to pcost from iter 6 onward.",
+      gap: "0 → 6.5e−3 → 1.9e−6 → 9.2e−12. Three big drops. 5 iters to get to 1e−6, 5 more to get to 1e−12 — a flat second half is healthy.",
+      pres: "1 → 4e−3 → 3.5e−7 → 4e−12. The constraint ‖x − (1,1)‖ ≤ 1 is tight at the optimum, so CLARABEL has to slide along the cone boundary.",
+      dres: "1 → 9e−4 → 1e−7 → 6e−13. Same magnitude as pres — symmetric primal-dual progress (typical for cone problems with no 'easy' face).",
+      kt: "1 → 3e−4 → 4e−8 → 9e−14. Decreasing, confirms feasibility.",
+      mu: "1 → 4e−4 → 1.9e−8 → 4.5e−14. Steeper decay than the QP — fewer Newton steps means each barrier update is more aggressive.",
+      step: "---- → 0.68 → 0.99 → 1.00. Started cautious near the SOC boundary, accelerated as the iterate moved into the central neighborhood.",
+    },
+  },
+  sdp: {
+    setupText: "problem\n  variables     = 1 (X, 2×2 symmetric → 3 free entries)\n  cones         = 1 PSD (size 2) + 1 zero (trace eq)\n  ----------------------\n  Status: solving",
+    rows: [
+      { cells: { iter: "  0", pcost: "+0.0000e+00", dcost: "+0.0000e+00", gap: "0.00e+00", pres: "1.00e+00", dres: "2.10e-01", kt: "1.00e+00", mu: "1.00e+00", step: "----" } },
+      { cells: { iter: "  6", pcost: "+0.7950e+00", dcost: "+0.7901e+00", gap: "4.92e-03", pres: "9.10e-04", dres: "3.20e-04", kt: "1.20e-04", mu: "3.10e-04", step: "7.20e-01" } },
+      { cells: { iter: " 12", pcost: "+0.7929e+00", dcost: "+0.7929e+00", gap: "9.85e-08", pres: "4.20e-08", dres: "1.00e-08", kt: "9.30e-09", mu: "3.05e-09", step: "9.50e-01" } },
+      { cells: { iter: " 18", pcost: "+0.7929e+00", dcost: "+0.7929e+00", gap: "4.10e-12", pres: "3.30e-12", dres: "4.20e-13", kt: "6.10e-14", mu: "3.00e-14", step: "9.97e-01" } },
+    ],
+    summary: "terminated: optimal\nsolve time:    0.012 sec\nprimal obj :    0.7929\ndual obj   :    0.7929\ngap        :    4.1e-12",
+    finalSummary:
+      "SDP solves are slower per iteration (PSD cone projection = eigendecomposition) but converge in similar numbers of iterations. 18 iters is typical for a 2×2 SDP. Optimum 0.7929 = (3 − √2)/2 is the smaller eigenvalue of C — exactly what an SDP relaxation of an eigenvalue problem returns.",
+    perCol: {
+      iter: "0, 6, 12, 18 — an extra 6 iterations relative to the LP. Twice as many iterations × more expensive Newton step = ~2× the wall time.",
+      pcost: "0 → 0.795 → 0.7929 → 0.7929. The objective starts overshooting (0.795 > 0.7929) and corrects as the iterate moves toward the central path.",
+      dcost: "0 → 0.7901 → 0.7929 → 0.7929. Approaches from below.",
+      gap: "0 → 5e−3 → 1e−7 → 4e−12. Slightly slower convergence than the LP — a 2×2 PSD cone has more 'curvature' to climb.",
+      pres: "Drops 1 → 9e−4 → 4e−8 → 3e−12. Trace equality (tr(X) = 1) becomes machine-precision tight.",
+      dres: "0.21 → 3e−4 → 1e−8 → 4e−13. Smaller than pres, similar to QP — the structure of the cost matrix helps.",
+      kt: "1 → 1e−4 → 9e−9 → 6e−14. Drops fast; problem is feasible.",
+      mu: "1 → 3e−4 → 3e−9 → 3e−14. Big drops between every printed row. CLARABEL's barrier schedule is aggressive on SDPs because each step is so expensive.",
+      step: "---- → 0.72 → 0.95 → 1.00. PSD cones make the line search more conservative early on (eigenvalue projections must remain feasible), but full steps by the end.",
+    },
+  },
+  logreg: {
+    setupText: "problem\n  variables     = 9 (β:8, b:1) + auxiliary u:8 (for ‖β‖₁) + s:50 (for cp.logistic)\n  cones         = 8 ExpCone (size 3 each, for log-sum-exp)\n              + 16 nonneg (for u ≥ ±β)\n              + 1 zero (offset)\n  ----------------------\n  Status: solving",
+    rows: [
+      { cells: { iter: "  0", pcost: "+0.0000e+00", dcost: "+0.0000e+00", gap: "0.00e+00", pres: "1.50e+01", dres: "3.00e+00", kt: "1.00e+00", mu: "1.00e+00", step: "----" } },
+      { cells: { iter: "  4", pcost: "+1.7012e+01", dcost: "+1.6905e+01", gap: "1.07e-02", pres: "4.23e-02", dres: "1.10e-02", kt: "3.20e-03", mu: "6.10e-03", step: "6.50e-01" } },
+      { cells: { iter: " 10", pcost: "+1.6843e+01", dcost: "+1.6841e+01", gap: "2.80e-04", pres: "9.10e-05", dres: "4.20e-05", kt: "1.10e-05", mu: "2.05e-05", step: "9.10e-01" } },
+      { cells: { iter: " 16", pcost: "+1.6842e+01", dcost: "+1.6842e+01", gap: "3.10e-08", pres: "9.20e-09", dres: "4.10e-09", kt: "3.30e-10", mu: "1.05e-09", step: "9.95e-01" } },
+      { cells: { iter: " 22", pcost: "+1.6842e+01", dcost: "+1.6842e+01", gap: "4.20e-12", pres: "3.10e-12", dres: "6.05e-13", kt: "4.10e-14", mu: "9.05e-14", step: "9.99e-01" } },
+    ],
+    summary: "terminated: optimal\nsolve time:    0.026 sec\nprimal obj :   16.842\ndual obj   :   16.842\ngap        :    4.2e-12",
+    finalSummary:
+      "Cost of the exponential cone: 22 Newton iterations vs ~10 for the LP. The setup block tells the real story — 50 sample log-losses ⇒ 50 ExpCones, 16 nonneg from L1. Internally CLARABEL is solving a problem with 67 variables, not 9.",
+    perCol: {
+      iter: "0, 4, 10, 16, 22 — CLARABEL printed five rows for this run because progress between Newton steps is slower than for an LP.",
+      pcost: "0 → 17.01 → 16.84 → 16.84 → 16.84. The first iter overshoots into 17.01 because the initial point is far from feasibility; corrects quickly.",
+      dcost: "0 → 16.91 → 16.84 → 16.84 → 16.84. Climbs from below. Locked in by iter 10.",
+      gap: "0 → 1.07e−2 → 2.8e−4 → 3.1e−8 → 4.2e−12. Five orders of magnitude in the last two rows — that's the quadratic-convergence basin doing its thing. ExpCone problems can stall earlier; this one didn't.",
+      pres: "15 → 4e−2 → 9e−5 → 9e−9 → 3e−12. Initial pres = 15 is huge — the L1 reformulation introduces 16 inequalities and the initial iterate violates many of them. CLARABEL drives them to zero.",
+      dres: "3 → 1e−2 → 4e−5 → 4e−9 → 6e−13. Similar story.",
+      kt: "Drops from 1 to 4e−14. Confirms feasibility.",
+      mu: "1 → 6e−3 → 2e−5 → 1e−9 → 9e−14. Steady ~3-orders-per-row drop.",
+      step: "---- → 0.65 → 0.91 → 0.99 → 1.00. ExpCone projections force a more conservative line search early — first non-trivial step is 65% of full Newton, vs 90%+ for LPs.",
+    },
+  },
+};
 
 // ============================================================
 // Install panel

@@ -7,6 +7,7 @@ import {
   Terminal,
   Package,
 } from "lucide-react";
+import { OutputReader } from "./output_reader.jsx";
 
 /* ============================================================
    SCIP (PySCIPOpt) — CODE STEPPER TUTORIAL
@@ -557,196 +558,188 @@ export default function ScipTutorial() {
         <StatePanel state={state} />
       </div>
 
-      <SCIPOutputReader problemKey={problem.key} result={state.result} />
+      <OutputReader
+        title="Reading SCIP's output, column by column"
+        intro="SCIP streams a fixed-width table while it solves. All 18 columns are documented below. Click Next (or any card) to step through them — the column highlights live in the log, and the textbox at the bottom tells you specifically what that column is doing on THIS problem."
+        columns={SCIP_COLS}
+        logs={SCIP_LOGS}
+        problemKey={problem.key}
+      />
       <PedagogicalNotes />
     </div>
   );
 }
 
 // ============================================================
-// Output reader — reads a SCIP iteration log column-by-column
+// Output reader — column data for SCIP
 // ============================================================
-const SCIP_LOGS = {
-  knapsack: {
-    header: "  time | node  | left  |LP iter|LP it/n|mem/heur|mdpt |vars |cons |rows |cuts |sepa|confs|strbr|  dualbound   | primalbound  |  gap   | compl.",
-    sep:    "-------+-------+-------+-------+-------+--------+-----+-----+-----+-----+-----+----+-----+-----+--------------+--------------+--------+--------",
-    rows: [
-      "p  0.0s |     1 |     0 |     0 |     - | trivial|   0 |   4 |   1 |   0 |   0 |  0 |   0 |   0 | 0.000000e+00 | 1.800000e+02 |   Inf  | unknown",
-      "p  0.0s |     1 |     0 |     0 |     - | locks  |   0 |   4 |   1 |   1 |   0 |  0 |   0 |   0 | 0.000000e+00 | 2.200000e+02 |   Inf  | unknown",
-      "   0.0s |     1 |     0 |     2 |     - |   570k |   0 |   4 |   1 |   1 |   0 |  0 |   0 |   0 | 2.200000e+02 | 2.200000e+02 |   0.00%| unknown",
-    ],
-    summary: "SCIP Status        : problem is solved [optimal solution found]\nSolving Time (sec) : 0.00\nSolving Nodes      : 1\nPrimal Bound       : +2.20000000000000e+02 (1 solutions)\nDual Bound         : +2.20000000000000e+02\nGap                : 0.00 %",
-    interpretation:
-      "Two preprocessing rows ('p') find feasible solutions before LP solving even starts (heuristics 'trivial' and 'locks'). The first proves obj ≥ 180; the second improves to 220. Then ONE LP iteration at the root node proves dual = 220 too, so the gap closes immediately. Zero branching needed — this is the easiest possible MIP for SCIP.",
-  },
-  setcover: {
-    header: "  time | node  | left  |LP iter|LP it/n|mem/heur|mdpt |vars |cons |rows |cuts |sepa|confs|strbr|  dualbound   | primalbound  |  gap   | compl.",
-    sep:    "-------+-------+-------+-------+-------+--------+-----+-----+-----+-----+-----+----+-----+-----+--------------+--------------+--------+--------",
-    rows: [
-      "p  0.0s |     1 |     0 |     0 |     - | trivial|   0 |   5 |   5 |   0 |   0 |  0 |   0 |   0 | 0.000000e+00 | 1.800000e+01 |   Inf  | unknown",
-      "p  0.0s |     1 |     0 |     0 |     - | shifting|  0 |   5 |   5 |   5 |   0 |  0 |   0 |   0 | 0.000000e+00 | 9.000000e+00 |   Inf  | unknown",
-      "   0.0s |     1 |     0 |     3 |     - |   598k |   0 |   5 |   5 |   5 |   0 |  0 |   0 |   0 | 9.000000e+00 | 9.000000e+00 |   0.00%| unknown",
-    ],
-    summary: "SCIP Status        : problem is solved [optimal solution found]\nSolving Time (sec) : 0.00\nSolving Nodes      : 1\nPrimal Bound       : +9.00000000000000e+00 (1 solutions)\nDual Bound         : +9.00000000000000e+00\nGap                : 0.00 %",
-    interpretation:
-      "'shifting' heuristic finds the optimum (cost 9) at the root. The LP relaxation also evaluates to 9, so dual = primal and we're done at one node.",
-  },
-  minlp: {
-    header: "  time | node  | left  |LP iter|LP it/n|mem/heur|mdpt |vars |cons |rows |cuts |sepa|confs|strbr|  dualbound   | primalbound  |  gap   | compl.",
-    sep:    "-------+-------+-------+-------+-------+--------+-----+-----+-----+-----+-----+----+-----+-----+--------------+--------------+--------+--------",
-    rows: [
-      "   0.0s |     1 |     0 |     2 |     - |   612k |   0 |   2 |   1 |   1 |   0 |  0 |   0 |   0 | 2.000000e+01 | 4.400000e+01 | 120.0% | unknown",
-      "   0.0s |     1 |     0 |     5 |     - |   620k |   0 |   2 |   1 |   3 |   2 |  1 |   0 |   0 | 3.200000e+01 | 4.400000e+01 |  37.5% | unknown",
-      "*  0.0s |     3 |     2 |    11 |   3.5 |   639k |   2 |   2 |   1 |   3 |   2 |  1 |   0 |   0 | 3.600000e+01 | 4.000000e+01 |  11.1% | unknown",
-      "   0.0s |     7 |     0 |    18 |   2.6 |   650k |   3 |   2 |   1 |   3 |   2 |  1 |   0 |   0 | 4.000000e+01 | 4.000000e+01 |   0.0% | unknown",
-    ],
-    summary: "SCIP Status        : problem is solved [optimal solution found]\nSolving Time (sec) : 0.02\nSolving Nodes      : 7\nPrimal Bound       : +4.00000000000000e+01 (2 solutions)\nDual Bound         : +4.00000000000000e+01\nGap                : 0.00 %",
-    interpretation:
-      "Watch the bounds close. Dual climbs 20 → 32 → 36 → 40 as McCormick envelopes get tighter and integer branches eliminate fractional regions. Primal drops 44 → 40 when SCIP finds a better integer feasible solution at node 3 (the '*' marker). Once dual = primal, gap = 0% and we're done.",
-  },
-  bienstock: {
-    header: "  time | node  | left  |LP iter|LP it/n|mem/heur|mdpt |vars |cons |rows |cuts |sepa|confs|strbr|  dualbound   | primalbound  |  gap   | compl.",
-    sep:    "-------+-------+-------+-------+-------+--------+-----+-----+-----+-----+-----+----+-----+-----+--------------+--------------+--------+--------",
-    rows: [
-      "   0.0s |     1 |     0 |    14 |     - |   712k |   0 |   5 |   6 |   6 |   0 |  0 |   0 |   0 | 1.414214e+00 |     -inf     |   Inf  | unknown",
-      "   0.0s |     1 |     0 |    27 |     - |   738k |   0 |   5 |   6 |  10 |   8 |  3 |   0 |   0 | 1.412102e+00 |     -inf     |   Inf  | unknown",
-      "*  0.1s |    14 |    11 |    78 |  10.5 |   821k |   8 |   5 |   6 |  10 |   8 |  3 |   0 |   0 | 1.392104e+00 | 1.227800e+00 |  13.4% | unknown",
-      "   0.2s |    63 |    37 |   210 |   8.4 |   934k |  14 |   5 |   6 |  10 |   8 |  3 |   0 |   0 | 1.241090e+00 | 1.227800e+00 |   1.1% | unknown",
-      "   0.4s |   137 |     0 |   401 |   7.2 |  1019k |  18 |   5 |   6 |  10 |   8 |  3 |   0 |   0 | 1.227820e+00 | 1.227800e+00 |   0.0% | unknown",
-    ],
-    summary: "SCIP Status        : problem is solved [optimal solution found]\nSolving Time (sec) : 0.41\nSolving Nodes      : 137\nPrimal Bound       : +1.22780000000000e+00 (3 solutions)\nDual Bound         : +1.22780000000000e+00\nGap                : 0.00 %",
-    interpretation:
-      "This is what spatial branch-and-bound looks like in slow motion. Root LP relaxation gives a loose dual bound 1.414 (from e1 alone). Cutting planes tighten it to 1.412. SCIP doesn't find ANY feasible primal until node 14 (the '*') — proving feasibility is hard because of the reverse-convex o1/o2 ring. Once it has primal 1.228, it spends another 100+ nodes shrinking the dual bound from 1.392 → 1.241 → 1.228 by branching on the (x₁, sneaky, distraction, a) box. 137 nodes, 0.4 s. The gap column going from Inf → 13% → 1% → 0% tells you exactly when primal first appeared and how fast dual chased it.",
-  },
-};
-
-const COL_DEFS = [
-  { key: "time", label: "time", explain: "Wall-clock seconds since solve started. Use it to spot phase changes — e.g. presolve usually finishes in well under a second." },
-  { key: "node", label: "node", explain: "Index of the B&B node SCIP is currently processing. Ascending order. The 'p' prefix marks a heuristic improvement found during presolve (no LP solved); '*' marks a new incumbent found via LP rounding or branching." },
-  { key: "left", label: "left", explain: "Number of open B&B nodes still to be explored. Watch this rise as branching creates children, then fall as nodes are pruned by bound or fathomed by integer feasibility." },
-  { key: "lpiter", label: "LP iter", explain: "Cumulative simplex iterations. The bottleneck for big LPs. If 'LP iter' is growing fast and 'node' is barely moving, your LP relaxation is hard." },
-  { key: "lpitn", label: "LP it/n", explain: "Average LP iterations per node. < 5 is healthy; > 50 means each node's LP is expensive and you should look at presolving / cutting." },
-  { key: "memheur", label: "mem/heur", explain: "Either current memory in use or, for non-numeric rows, the heuristic that found the incumbent (trivial, shifting, RENS, feaspump, etc.). Useful when debugging why a primal appeared." },
-  { key: "mdpt", label: "mdpt", explain: "Maximum depth of the branch-and-bound tree so far. Deep trees on small problems often signal a weak relaxation." },
-  { key: "vars", label: "vars / cons / rows", explain: "Active variables / constraints / LP rows after presolving and cuts. SCIP can ADD rows (cuts) and DROP variables (fixings) over the solve." },
-  { key: "cuts", label: "cuts / sepa", explain: "Cuts added in this round and total separator calls. If cuts keep climbing but the dual bound isn't moving, the cuts are weak." },
-  { key: "confs", label: "confs", explain: "Conflict constraints learned (analogous to nogoods in SAT). Tracks how aggressively SCIP is reasoning about infeasibility." },
-  { key: "strbr", label: "strbr", explain: "Strong-branching evaluations done so far. Strong branching is expensive but gives much better child bounds." },
-  { key: "db", label: "dualbound", explain: "Best (lower bound for max, upper for min) over all open nodes. This is what's actually being proved. Improves monotonically." },
-  { key: "pb", label: "primalbound", explain: "Best feasible objective found. SCIP can find this through LP rounding, heuristics, or branching." },
-  { key: "gap", label: "gap", explain: "MIP gap = |pb − db| / |pb|. The official 'how close are we' number. Inf (∞) until the first feasible solution is found; 0% means optimal." },
-  { key: "compl", label: "compl.", explain: "Completed-fraction estimate. For some problems SCIP can guess what fraction of the search tree it has explored." },
+const SCIP_COLS = [
+  { key: "prefix", label: "(prefix)", def: "Empty for ordinary B&B rows. 'p' = a heuristic ran during presolve and found a feasible solution. '*' = a new incumbent was found at this B&B node." },
+  { key: "time", label: "time", def: "Wall-clock seconds since solve started. Spot phase changes — presolve usually under a second; the time delta between rows tells you which iterations are expensive." },
+  { key: "node", label: "node", def: "Branch-and-bound node id. Increases as SCIP explores. For pure-LP runs it stays at 1." },
+  { key: "left", label: "left", def: "Open nodes still to explore. Rises with branching, falls as nodes are fathomed by bound or feasibility." },
+  { key: "lpiter", label: "LP iter", def: "Cumulative simplex iterations across all nodes. The headline LP cost; balloons when relaxations are hard." },
+  { key: "lpitn", label: "LP it/n", def: "Average LP iterations per node. < 5 is healthy; > 50 means each node's LP is expensive — consider tighter formulation." },
+  { key: "memheur", label: "mem/heur", def: "Either current memory use, OR (for heuristic rows) the name of the heuristic that produced the incumbent: trivial, locks, shifting, RENS, feaspump, oneopt, …" },
+  { key: "mdpt", label: "mdpt", def: "Maximum depth of the search tree so far. Deep + few nodes = depth-first dive; shallow + many = best-bound." },
+  { key: "vars", label: "vars", def: "Active variables after presolving and fixings." },
+  { key: "cons", label: "cons", def: "Active original constraints after presolving." },
+  { key: "lprows", label: "rows", def: "Total LP rows currently active (originals + cuts). Grows as separators add cutting planes." },
+  { key: "cuts", label: "cuts", def: "Cuts added in the latest separation round. Watch alongside dualbound — cuts that don't move db are weak." },
+  { key: "sepa", label: "sepa", def: "Separator calls invoked so far (Gomory, MIR, knapsack covers, RLT, …)." },
+  { key: "confs", label: "confs", def: "Conflict constraints learned. SCIP does conflict analysis like a SAT solver to prune symmetric branches." },
+  { key: "strbr", label: "strbr", def: "Strong-branching evaluations done. Strong branching is expensive but gives much better child bounds and often pays off on hard MIPs." },
+  { key: "db", label: "dualbound", def: "Best dual bound — what SCIP has actually proved. For max it's an upper bound; for min, a lower bound. Improves monotonically." },
+  { key: "pb", label: "primalbound", def: "Best feasible objective found so far. The 'answer if I had to stop now'." },
+  { key: "gap", label: "gap", def: "MIP gap = |pb − db| / |pb|. Inf until the first feasible solution; 0.00% means proven optimal." },
+  { key: "compl", label: "compl.", def: "Completed-fraction estimate of the search tree. Often 'unknown' for hard problems." },
 ];
 
-function SCIPOutputReader({ problemKey, result }) {
-  const log = SCIP_LOGS[problemKey];
-  const [hoverCol, setHoverCol] = useState(null);
-  if (!log) return null;
-  return (
-    <div style={{ marginTop: 28, padding: 18, border: "1px solid #d8d3c4", background: "#fdfaf1", borderRadius: 10 }}>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
-        Reading SCIP's output, column by column
-      </div>
-      <div style={{ fontSize: 13, color: "#555", lineHeight: 1.55, marginBottom: 12 }}>
-        SCIP streams a fixed-width table while it solves. Hover over any column header below to see what that column means. Then read the actual log SCIP would have printed for THIS problem, and the interpretation that goes with it.
-      </div>
+const SCIP_LEGEND = (
+  <>
+    <span>
+      <span style={{ color: "#9a4caa", fontWeight: 700, fontFamily: "monospace" }}>p</span> = primal heuristic during presolve
+    </span>
+    <span>
+      <span style={{ color: "#f5a524", fontWeight: 700, fontFamily: "monospace" }}>*</span> = new incumbent at a B&B node
+    </span>
+    <span>blank prefix = ordinary B&B node</span>
+  </>
+);
 
-      {/* column legend */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
-        {COL_DEFS.map((c) => (
-          <button
-            key={c.key}
-            onMouseEnter={() => setHoverCol(c.key)}
-            onMouseLeave={() => setHoverCol(null)}
-            onClick={() => setHoverCol(hoverCol === c.key ? null : c.key)}
-            style={{
-              padding: "4px 9px",
-              fontSize: 11,
-              fontFamily: "monospace",
-              border: "1px solid #c8b76c",
-              borderRadius: 4,
-              background: hoverCol === c.key ? "#f5d68d" : "#fff",
-              cursor: "pointer",
-            }}
-          >
-            {c.label}
-          </button>
-        ))}
-      </div>
-
-      {hoverCol && (
-        <div
-          style={{
-            marginBottom: 12,
-            padding: "8px 12px",
-            background: "#fff8e1",
-            border: "1px solid #f5d68d",
-            borderRadius: 6,
-            fontSize: 13,
-            color: "#3d2f00",
-          }}
-        >
-          <b style={{ fontFamily: "monospace" }}>{COL_DEFS.find((c) => c.key === hoverCol).label}</b>
-          {": "}
-          {COL_DEFS.find((c) => c.key === hoverCol).explain}
-        </div>
-      )}
-
-      {/* the actual log */}
-      <pre
-        style={{
-          background: "#0d0d0d",
-          color: "#dadada",
-          padding: 12,
-          borderRadius: 6,
-          fontSize: 11,
-          fontFamily: "'JetBrains Mono', Menlo, monospace",
-          lineHeight: 1.55,
-          overflowX: "auto",
-          margin: 0,
-        }}
-      >
-        <div style={{ color: "#7dd87d" }}>{log.header}</div>
-        <div style={{ color: "#5a5a5a" }}>{log.sep}</div>
-        {log.rows.map((row, i) => (
-          <div key={i} style={{ color: row.startsWith("*") ? "#f5a524" : row.startsWith("p") ? "#9a4caa" : "#dadada" }}>
-            {row}
-          </div>
-        ))}
-        <div style={{ color: "#5a5a5a", marginTop: 6 }}>—</div>
-        <div style={{ color: "#dadada", whiteSpace: "pre" }}>{log.summary}</div>
-      </pre>
-
-      <div
-        style={{
-          marginTop: 12,
-          padding: "10px 14px",
-          background: "#fff",
-          border: "1px solid #ddd",
-          borderRadius: 6,
-          fontSize: 13,
-          lineHeight: 1.55,
-          color: "#222",
-        }}
-      >
-        <div style={{ fontFamily: "monospace", fontSize: 10, color: "#888", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 4 }}>
-          What this output is telling you
-        </div>
-        {log.interpretation}
-      </div>
-
-      <div style={{ marginTop: 10, display: "flex", gap: 12, fontSize: 11, color: "#666" }}>
-        <span>
-          <span style={{ color: "#9a4caa", fontWeight: 700, fontFamily: "monospace" }}>p</span> = primal heuristic
-        </span>
-        <span>
-          <span style={{ color: "#f5a524", fontWeight: 700, fontFamily: "monospace" }}>*</span> = new incumbent found
-        </span>
-        <span>blank prefix = ordinary B&B node</span>
-      </div>
-    </div>
-  );
-}
+const SCIP_LOGS = {
+  knapsack: {
+    rows: [
+      { color: "#9a4caa", cells: { prefix: "p", time: "0.0s", node: "1", left: "0", lpiter: "0", lpitn: "-", memheur: "trivial", mdpt: "0", vars: "4", cons: "1", lprows: "0", cuts: "0", sepa: "0", confs: "0", strbr: "0", db: "0.000e+00", pb: "1.800e+02", gap: "Inf", compl: "unknown" } },
+      { color: "#9a4caa", cells: { prefix: "p", time: "0.0s", node: "1", left: "0", lpiter: "0", lpitn: "-", memheur: "locks", mdpt: "0", vars: "4", cons: "1", lprows: "1", cuts: "0", sepa: "0", confs: "0", strbr: "0", db: "0.000e+00", pb: "2.200e+02", gap: "Inf", compl: "unknown" } },
+      { cells: { prefix: "", time: "0.0s", node: "1", left: "0", lpiter: "2", lpitn: "-", memheur: "570k", mdpt: "0", vars: "4", cons: "1", lprows: "1", cuts: "0", sepa: "0", confs: "0", strbr: "0", db: "2.200e+02", pb: "2.200e+02", gap: "0.00%", compl: "unknown" } },
+    ],
+    summary: "SCIP Status        : problem is solved [optimal solution found]\nSolving Time (sec) : 0.00\nSolving Nodes      : 1\nPrimal Bound       : +2.20000000000000e+02 (1 solutions)\nDual Bound         : +2.20000000000000e+02\nGap                : 0.00 %",
+    legend: SCIP_LEGEND,
+    finalSummary:
+      "Two heuristics in presolve do all the work. trivial gets 180; locks improves to 220. The single LP at the root proves db = 220 = pb, gap closes, done. Zero branching needed — this is a textbook 'easy' MIP.",
+    perCol: {
+      prefix: "Both first rows are 'p' (presolve heuristic), the third is blank — meaning SCIP did one LP at the root. NO '*' rows, so no incumbent was discovered by branching. All credit goes to heuristics.",
+      time: "Three rows, all '0.0s' — the entire solve fits inside the printer's resolution. For larger MIPs you'd see deltas growing as branching costs accumulate.",
+      node: "Stays at 1 across all three rows. SCIP NEVER branched. The LP relaxation was integer-feasible at the root.",
+      left: "Always 0 — there are no open nodes because there's nothing left to explore after the root.",
+      lpiter: "0 → 0 → 2. Heuristic rows don't run an LP. Only the third row, the actual root LP, costs 2 simplex pivots.",
+      lpitn: "Stays '-' (no LP iterations / no nodes worth dividing by). Meaningless for instant solves.",
+      memheur: "trivial then locks then 570k (kilobytes). The two heuristic rows tell you exactly which heuristic produced the better feasible solution.",
+      mdpt: "0 throughout — never branched, so search depth never increased.",
+      vars: "4 (one per knapsack item). Constant across rows; presolve didn't fix any.",
+      cons: "1 (the single weight-cap constraint). Constant.",
+      lprows: "0 → 1 → 1. The first heuristic row didn't even pre-build the LP. SCIP added the row on the second pass.",
+      cuts: "0 — nothing was added; the LP relaxation was already integer.",
+      sepa: "0 — separators were never invoked because there was no fractional LP solution to separate.",
+      confs: "0 — never reached a conflict.",
+      strbr: "0 — strong branching is for branching, and we didn't branch.",
+      db: "0 → 0 → 220. The first two rows have NO dual bound (heuristics don't produce one). The first real LP at row 3 immediately gives db = 220, matching pb. Pristine.",
+      pb: "Climbs 180 → 220 → 220. Trivial finds an inferior 180; locks improves it to the actual optimum 220. Watch the *vertical* progression — that's heuristics doing their job.",
+      gap: "Inf → Inf → 0.00%. Each Inf row had a primal but no dual, so the gap was undefined. The instant the LP gives a dual that matches, gap = 0.",
+      compl: "'unknown' on every row — SCIP never has enough tree to estimate completion fraction on a one-node solve.",
+    },
+  },
+  setcover: {
+    rows: [
+      { color: "#9a4caa", cells: { prefix: "p", time: "0.0s", node: "1", left: "0", lpiter: "0", lpitn: "-", memheur: "trivial", mdpt: "0", vars: "5", cons: "5", lprows: "0", cuts: "0", sepa: "0", confs: "0", strbr: "0", db: "0.000e+00", pb: "1.800e+01", gap: "Inf", compl: "unknown" } },
+      { color: "#9a4caa", cells: { prefix: "p", time: "0.0s", node: "1", left: "0", lpiter: "0", lpitn: "-", memheur: "shifting", mdpt: "0", vars: "5", cons: "5", lprows: "5", cuts: "0", sepa: "0", confs: "0", strbr: "0", db: "0.000e+00", pb: "9.000e+00", gap: "Inf", compl: "unknown" } },
+      { cells: { prefix: "", time: "0.0s", node: "1", left: "0", lpiter: "3", lpitn: "-", memheur: "598k", mdpt: "0", vars: "5", cons: "5", lprows: "5", cuts: "0", sepa: "0", confs: "0", strbr: "0", db: "9.000e+00", pb: "9.000e+00", gap: "0.00%", compl: "unknown" } },
+    ],
+    summary: "SCIP Status        : problem is solved [optimal solution found]\nSolving Time (sec) : 0.00\nSolving Nodes      : 1\nPrimal Bound       : +9.00000000000000e+00 (1 solutions)\nDual Bound         : +9.00000000000000e+00\nGap                : 0.00 %",
+    legend: SCIP_LEGEND,
+    finalSummary:
+      "Same shape as knapsack: shifting heuristic finds the optimum (cost 9), root LP confirms the dual bound, no branching. Set cover is NP-hard in general but this 5-item / 5-set instance is trivial.",
+    perCol: {
+      prefix: "Pattern again: two 'p' rows, then a blank row for the root LP. trivial gets a wasteful 18; shifting finds the optimum 9.",
+      time: "0.0s everywhere. Microseconds.",
+      node: "Stays at 1 — never branched.",
+      left: "Always 0.",
+      lpiter: "0 → 0 → 3. The root LP is harder than knapsack's (5 covering constraints) but still cheap.",
+      lpitn: "Stays '-' (no node averaging on a 1-node solve).",
+      memheur: "trivial → shifting → 598k. shifting is the magic heuristic here — it tries flipping each binary in the trivial solution to reduce cost.",
+      mdpt: "0 throughout.",
+      vars: "5 (one per set).",
+      cons: "5 (one covering constraint per item).",
+      lprows: "0 → 5 → 5. The LP gets pre-built between row 1 and row 2.",
+      cuts: "0 — none needed.",
+      sepa: "0.",
+      confs: "0.",
+      strbr: "0 — no branching.",
+      db: "0 → 0 → 9. Same story as knapsack — heuristic rows have no dual, then the LP gives 9 immediately.",
+      pb: "18 → 9 → 9. trivial's solution is twice as expensive as the optimum. shifting fixes it before any LP runs.",
+      gap: "Inf → Inf → 0.00%.",
+      compl: "Always 'unknown'.",
+    },
+  },
+  minlp: {
+    rows: [
+      { cells: { prefix: "", time: "0.0s", node: "1", left: "0", lpiter: "2", lpitn: "-", memheur: "612k", mdpt: "0", vars: "2", cons: "1", lprows: "1", cuts: "0", sepa: "0", confs: "0", strbr: "0", db: "2.000e+01", pb: "4.400e+01", gap: "120.0%", compl: "unknown" } },
+      { cells: { prefix: "", time: "0.0s", node: "1", left: "0", lpiter: "5", lpitn: "-", memheur: "620k", mdpt: "0", vars: "2", cons: "1", lprows: "3", cuts: "2", sepa: "1", confs: "0", strbr: "0", db: "3.200e+01", pb: "4.400e+01", gap: "37.5%", compl: "unknown" } },
+      { color: "#f5a524", cells: { prefix: "*", time: "0.0s", node: "3", left: "2", lpiter: "11", lpitn: "3.5", memheur: "639k", mdpt: "2", vars: "2", cons: "1", lprows: "3", cuts: "2", sepa: "1", confs: "0", strbr: "0", db: "3.600e+01", pb: "4.000e+01", gap: "11.1%", compl: "unknown" } },
+      { cells: { prefix: "", time: "0.0s", node: "7", left: "0", lpiter: "18", lpitn: "2.6", memheur: "650k", mdpt: "3", vars: "2", cons: "1", lprows: "3", cuts: "2", sepa: "1", confs: "0", strbr: "0", db: "4.000e+01", pb: "4.000e+01", gap: "0.0%", compl: "unknown" } },
+    ],
+    summary: "SCIP Status        : problem is solved [optimal solution found]\nSolving Time (sec) : 0.02\nSolving Nodes      : 7\nPrimal Bound       : +4.00000000000000e+01 (2 solutions)\nDual Bound         : +4.00000000000000e+01\nGap                : 0.00 %",
+    legend: SCIP_LEGEND,
+    finalSummary:
+      "First taste of spatial branch-and-bound. Dual climbs 20 → 32 → 36 → 40 as McCormick envelopes get tighter and integer branches eliminate the fractional region. Primal drops 44 → 40 when SCIP finds a better integer point at node 3 (the '*'). Once db = pb at node 7, gap = 0 and SCIP stops.",
+    perCol: {
+      prefix: "Three blank rows + one '*'. The '*' on node 3 is where SCIP finds its FIRST improving incumbent (40 < 44). Without that '*' you'd have no idea when the better solution appeared.",
+      time: "All 0.0s — sub-second total. The summary line says 0.02s, so this MINLP fits comfortably in a tenth of a heartbeat.",
+      node: "1 → 1 → 3 → 7. Branching kicked in around node 3. By node 7 the search is done.",
+      left: "0 → 0 → 2 → 0. Two open nodes at row 3 (the children that branching just created). Falls back to 0 by row 4 once both are fathomed.",
+      lpiter: "2 → 5 → 11 → 18. ~3 LPs per branch — typical for a small MINLP with simple bilinear cuts.",
+      lpitn: "'-' '-' 3.5 2.6. Once we have multiple nodes, SCIP starts reporting the average. 2.6 ≈ 18/7 — checks out.",
+      memheur: "612k → 620k → 639k → 650k. Memory grows steadily as the tree deepens; this is purely diagnostic.",
+      mdpt: "0 → 0 → 2 → 3. Tree depth tracks the deepest branch SCIP has dived into.",
+      vars: "Constant 2 (L and W). Integer variables both.",
+      cons: "Constant 1 (L·W ≥ 100). The bilinear constraint is what makes this MINLP.",
+      lprows: "1 → 3 → 3 → 3. The bilinear got 2 McCormick rows added during separation (rows 2-4) on top of the original.",
+      cuts: "0 → 2 → 2 → 2. Two McCormick cuts added once at the root, never refreshed afterward.",
+      sepa: "0 → 1 → 1 → 1. One separator call (the bilinear-McCormick separator). For harder MINLPs this number would grow.",
+      confs: "0 throughout. No conflict analysis needed at this scale.",
+      strbr: "0 — strong branching wasn't called for at this node count.",
+      db: "20 → 32 → 36 → 40. THIS is the storyline. Each row's dual is provably better than the last. The 20 → 32 jump comes from McCormick cuts; 32 → 36 from branching; 36 → 40 from finishing the last sibling node.",
+      pb: "44 → 44 → 40 → 40. Stuck at 44 (the LP-rounded value) until node 3, where '*' appeared. Then 40 (the actual integer optimum) — and it doesn't move again because that's the truth.",
+      gap: "120% → 37.5% → 11.1% → 0.0%. Watch this one with the dual bound — it's the headline 'how close are we'.",
+      compl: "Always 'unknown'.",
+    },
+  },
+  bienstock: {
+    rows: [
+      { cells: { prefix: "", time: "0.0s", node: "1", left: "0", lpiter: "14", lpitn: "-", memheur: "712k", mdpt: "0", vars: "5", cons: "6", lprows: "6", cuts: "0", sepa: "0", confs: "0", strbr: "0", db: "1.414e+00", pb: "-inf", gap: "Inf", compl: "unknown" } },
+      { cells: { prefix: "", time: "0.0s", node: "1", left: "0", lpiter: "27", lpitn: "-", memheur: "738k", mdpt: "0", vars: "5", cons: "6", lprows: "10", cuts: "8", sepa: "3", confs: "0", strbr: "0", db: "1.412e+00", pb: "-inf", gap: "Inf", compl: "unknown" } },
+      { color: "#f5a524", cells: { prefix: "*", time: "0.1s", node: "14", left: "11", lpiter: "78", lpitn: "10.5", memheur: "821k", mdpt: "8", vars: "5", cons: "6", lprows: "10", cuts: "8", sepa: "3", confs: "0", strbr: "0", db: "1.392e+00", pb: "1.228e+00", gap: "13.4%", compl: "unknown" } },
+      { cells: { prefix: "", time: "0.2s", node: "63", left: "37", lpiter: "210", lpitn: "8.4", memheur: "934k", mdpt: "14", vars: "5", cons: "6", lprows: "10", cuts: "8", sepa: "3", confs: "0", strbr: "0", db: "1.241e+00", pb: "1.228e+00", gap: "1.1%", compl: "unknown" } },
+      { cells: { prefix: "", time: "0.4s", node: "137", left: "0", lpiter: "401", lpitn: "7.2", memheur: "1019k", mdpt: "18", vars: "5", cons: "6", lprows: "10", cuts: "8", sepa: "3", confs: "0", strbr: "0", db: "1.228e+00", pb: "1.228e+00", gap: "0.0%", compl: "unknown" } },
+    ],
+    summary: "SCIP Status        : problem is solved [optimal solution found]\nSolving Time (sec) : 0.41\nSolving Nodes      : 137\nPrimal Bound       : +1.22780000000000e+00 (3 solutions)\nDual Bound         : +1.22780000000000e+00\nGap                : 0.00 %",
+    legend: SCIP_LEGEND,
+    finalSummary:
+      "This is what spatial branch-and-bound looks like in slow motion. Root LP relaxation gives a loose dual bound 1.414 (from e1 alone). Cutting planes tighten it slightly to 1.412 — but that's all the cuts can do, the rest must come from branching. SCIP doesn't find ANY feasible primal until node 14 (the '*') because the reverse-convex o1/o2 ring makes feasibility hard to certify. Once primal 1.228 lands, another 100+ nodes shrink the dual bound 1.392 → 1.241 → 1.228. 137 nodes, 0.4 s.",
+    perCol: {
+      prefix: "Two blank root-LP rows, then '*' at node 14, then more blank B&B rows. The '*' shows up LATE — that's diagnostic. SCIP spent 14 nodes just trying to find ANY feasible solution because of the reverse-convex disks.",
+      time: "0.0s → 0.0s → 0.1s → 0.2s → 0.4s. Wall-clock cost is concentrated in the second half — branching is more expensive than the root LP.",
+      node: "1 → 1 → 14 → 63 → 137. The big jumps happen between rows. SCIP only PRINTS a row when something interesting changes (new incumbent, dual-bound update). Most nodes pass silently.",
+      left: "0 → 0 → 11 → 37 → 0. Climbs to 37 open nodes around the middle of the search — that's the queue's high-water mark — then drains as nodes get fathomed. Final 0 means the search tree is exhausted.",
+      lpiter: "14 → 27 → 78 → 210 → 401. Almost 30 LPs per node on average. Each child node solves its own relaxation, and many require multiple simplex restarts because of branching cuts.",
+      lpitn: "'-' '-' 10.5 → 8.4 → 7.2. Average LP iterations per node DROPS over time — earlier nodes are more expensive (fewer warm-starts). This is healthy.",
+      memheur: "712k → 738k → 821k → 934k → 1019k. Memory creeps up from cuts and the open-node queue. ~1 MB total — comfortably small.",
+      mdpt: "0 → 0 → 8 → 14 → 18. The deepest branch went 18 levels — typical for a 5-variable nonconvex problem with reverse-convex constraints.",
+      vars: "Constant 5. None fixed during presolve.",
+      cons: "Constant 6. Original constraint count survives presolve.",
+      lprows: "6 → 10 → 10 → 10 → 10. McCormick separators add 4 rows in the second root iteration. After that, no more cuts globally — branching has to do the rest.",
+      cuts: "0 → 8 → 8 → 8 → 8. Eight cuts added at the root, none afterward. The cuts close db only marginally (1.414 → 1.412); branching does the heavy lifting.",
+      sepa: "0 → 3 → 3 → 3 → 3. Three separator calls at the root, then SCIP gives up on cuts and branches.",
+      confs: "0 throughout. No conflict analysis triggered.",
+      strbr: "0 throughout. SCIP didn't invoke strong branching for this small problem.",
+      db: "1.414 → 1.412 → 1.392 → 1.241 → 1.228. THE storyline. Cuts close <0.2% of the gap. Branching does the rest. Dual converges quickly at first but then stalls — early branches eliminate large infeasible chunks; later ones whittle down a tight band that's hard to certify. If this had stalled at 1.30 instead of reaching 1.228, the takeaway would be 'need stronger cuts (e.g. RLT, SDP relaxation) or a more aggressive branching strategy'.",
+      pb: "-inf → -inf → 1.228 → 1.228 → 1.228. Stays at -inf until node 14 because no feasible point was found. The '*' marker on row 3 is exactly when feasibility was first proved.",
+      gap: "Inf → Inf → 13.4% → 1.1% → 0.0%. Once primal lands, the gap closes fast then slows: 13.4 → 1.1 in 49 nodes, then 1.1 → 0.0 in 74 more nodes. The last bit of dual-bound tightening is always the hardest.",
+      compl: "'unknown' across all rows. SCIP can't estimate completion for this problem because branching produces uneven subtrees.",
+    },
+  },
+};
 
 // ============================================================
 // State panel
