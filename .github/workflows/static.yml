@@ -28,12 +28,14 @@ jobs:
 
       - name: Install visualization deps
         working-directory: visualizations
-        # `npm install` instead of `npm ci` to side-step the
+        # Delete the lock file before installing — sidesteps the
         # optional-dependencies lock-file bug
         # (https://github.com/npm/cli/issues/4828) where the
         # platform-specific rollup binary for the runner's OS is
         # missing from a lock file generated on a different OS.
-        run: npm install --no-audit --no-fund
+        run: |
+          rm -f package-lock.json
+          npm install --no-audit --no-fund
 
       - name: Build visualizations
         working-directory: visualizations
