@@ -27,6 +27,11 @@ import DualitySensitivityDemo from '../duality_sensitivity_demo.jsx';
 import SimplexTableauDemo from '../simplex_tableau_demo.jsx';
 import HeuristicsDemo from '../heuristics_demo.jsx';
 import DecompositionDemo from '../decomposition_demo.jsx';
+import LpSolversDemo from '../lp_solvers_demo.jsx';
+import NetworkFlowDemo from '../network_flow_demo.jsx';
+import RlDemo from '../rl_demo.jsx';
+import RlhfDemo from '../rlhf_demo.jsx';
+import ExcelSolverDemo from '../excel_solver_demo.jsx';
 import PyTorchTutorial from '../pytorch_tutorial.jsx';
 import MLCompare from '../ml_compare.jsx';
 import NLPApplications from '../nlp_applications.jsx';
@@ -178,6 +183,46 @@ const DEMOS = [
   },
 
   // ── Advanced topics ────────────────────────────────────────────
+  {
+    id: 'lp-solvers',
+    category: 'advanced',
+    title: 'LP Modelers — PuLP / AMPL / Gurobi / CPLEX',
+    description:
+      "Same production LP, four languages. Tabs to switch; identical numerical answer. Includes API cheat sheet mapping common operations across the four modelers and per-language install notes.",
+    Component: LpSolversDemo,
+  },
+  {
+    id: 'excel-solver',
+    category: 'advanced',
+    title: 'Excel Solver — Spreadsheet Optimization',
+    description:
+      "Three problem types laid out as Excel sheets: LP, IP (knapsack), and NLP (curve fit). Each with formula highlighting, Solver dialog mockup, results, plus a SUMPRODUCT/IF/INDEX cheat sheet.",
+    Component: ExcelSolverDemo,
+  },
+  {
+    id: 'network-flow',
+    category: 'advanced',
+    title: 'Network Flow — NetworkX & OR-Tools',
+    description:
+      "One graph, three problems (shortest path, max flow, min-cost flow), two libraries side-by-side. Flow values overlaid on the graph in red; saturation indicated.",
+    Component: NetworkFlowDemo,
+  },
+  {
+    id: 'rl',
+    category: 'advanced',
+    title: 'RL — Gridworld (Value / Policy / Q-Learning)',
+    description:
+      "5×5 gridworld with goal, lava, and step penalty. Toggle between value iteration, policy iteration, and tabular Q-learning. Watch V-values fill in as a heatmap and the greedy policy crystallize as arrows.",
+    Component: RlDemo,
+  },
+  {
+    id: 'rlhf',
+    category: 'advanced',
+    title: 'RLHF — Reward Modeling + Policy Update',
+    description:
+      "1-D toy of the RLHF pipeline used to align modern LLMs. Sample preference pairs, fit a Bradley-Terry reward model, take a KL-regularized PPO step, watch the policy mean march toward the true x⋆.",
+    Component: RlhfDemo,
+  },
   {
     id: 'simplex-tableau',
     category: 'advanced',
