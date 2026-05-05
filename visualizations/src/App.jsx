@@ -41,6 +41,7 @@ import TableauPivoterDemo from '../tableau_pivoter_demo.jsx';
 import DualConstructionDemo from '../dual_construction_demo.jsx';
 import SensitivityWalkthroughDemo from '../sensitivity_walkthrough_demo.jsx';
 import PythonBasicsTutorial from '../python_basics_tutorial.jsx';
+import ObjectiveSliderDemo from '../objective_slider_demo.jsx';
 
 // ---------- Categories (display order: LP → IP → NLP → ML → Tutorials) ----------
 const CATEGORIES = [
@@ -70,8 +71,8 @@ const CATEGORIES = [
   },
   {
     id: 'tutorials',
-    title: 'In-Class Code Steppers',
-    blurb: 'Walk through algorithm and modeling code line by line for live lecture demonstration. Copy code or download a Jupyter notebook with one click.',
+    title: 'Getting Started',
+    blurb: 'Setup and reference for students new to Python or rusty on the scientific stack.',
     accent: '#c8311c',
   },
 ];
@@ -170,6 +171,14 @@ const DEMOS = [
   },
 
   // ── Advanced topics ────────────────────────────────────────────
+  {
+    id: 'objective-slider',
+    category: 'lp',
+    title: 'Objective-Level Slider — LP / IP / Convex / Nonconvex',
+    description:
+      'Slide the objective value z and watch the level set (line, lattice, circle, or multimodal contour) move across the feasible region. Four tabs compare LP, IP, convex NLP, and nonconvex NLP side by side. The optimum is the extremal z that still touches feasibility.',
+    Component: ObjectiveSliderDemo,
+  },
   {
     id: 'lp-solvers',
     category: 'lp',
@@ -326,7 +335,7 @@ const DEMOS = [
   },
   {
     id: 'perceptron-tutorial',
-    category: 'tutorials',
+    category: 'ml',
     title: 'Perceptron — Code Walkthrough',
     description:
       'Python pseudocode on the left with the active line highlighted; scatter plot on the right updates each step. For live in-class demonstration.',
@@ -334,7 +343,7 @@ const DEMOS = [
   },
   {
     id: 'sgd-adam-tutorial',
-    category: 'tutorials',
+    category: 'nlp',
     title: 'SGD & Adam — Code Stepper',
     description:
       'Step through SGD, momentum, and Adam line-by-line on a logistic-regression problem. PyTorch comparison at the bottom.',
@@ -342,7 +351,7 @@ const DEMOS = [
   },
   {
     id: 'pyomo-tutorial',
-    category: 'tutorials',
+    category: 'nlp',
     title: 'Pyomo + IPOPT — Code Stepper',
     description:
       'Build three NLPs (constrained QP, disk-projection, Markowitz portfolio) line-by-line in Pyomo and watch IPOPT solve them. Includes install instructions.',
@@ -350,7 +359,7 @@ const DEMOS = [
   },
   {
     id: 'amplpy-tutorial',
-    category: 'tutorials',
+    category: 'lp',
     title: 'AMPL + amplpy — Code Stepper',
     description:
       'Mirror of the Pyomo + IPOPT walkthrough using amplpy. Three problems (QP, Markowitz portfolio, HS71). Toggle the .mod view to see the equivalent pure-AMPL syntax. Includes a Pyomo translation cheat sheet.',
@@ -358,7 +367,7 @@ const DEMOS = [
   },
   {
     id: 'cvxpy-tutorial',
-    category: 'tutorials',
+    category: 'nlp',
     title: 'CVXPY — Code Stepper',
     description:
       'Step through LP, QP, SOCP, and SDP examples in CVXPY. Watch how the same Variable / Constraint / Problem pattern adapts as the problem class changes.',
@@ -366,7 +375,7 @@ const DEMOS = [
   },
   {
     id: 'scipy-tutorial',
-    category: 'tutorials',
+    category: 'nlp',
     title: 'scipy.optimize — Code Stepper',
     description:
       'Rosenbrock from x₀ = (-1.5, 2.0). Compare derivative-free, first-order, and second-order methods — Nelder-Mead, BFGS, Newton-CG, trust-ncg, and friends. Side-by-side nfev/njev/nhev/nit table.',
@@ -374,7 +383,7 @@ const DEMOS = [
   },
   {
     id: 'scip-tutorial',
-    category: 'tutorials',
+    category: 'ip',
     title: 'SCIP / PySCIPOpt — Code Stepper',
     description:
       'MILP and MINLP examples (knapsack, set cover, integer rectangle, Bienstock\'s nonconvex trap). Step through PySCIPOpt code, watch primal/dual bounds, and read SCIP\'s log column-by-column.',
@@ -382,7 +391,7 @@ const DEMOS = [
   },
   {
     id: 'gurobi-tutorial',
-    category: 'tutorials',
+    category: 'ip',
     title: 'Gurobi (gurobipy) — Code Stepper',
     description:
       'Industrial MIP solver: production LP, facility-location MILP, cardinality-constrained MIQP, and Bienstock\'s nonconvex problem with NonConvex=2. Includes a column-by-column reader for Gurobi\'s log.',
@@ -390,7 +399,7 @@ const DEMOS = [
   },
   {
     id: 'google-tools-tutorial',
-    category: 'tutorials',
+    category: 'ip',
     title: 'Google OR-Tools — Code Stepper',
     description:
       'Three Google solvers: PDLP (matrix-free LP for million-variable problems), specialized network-flow (min-cost-flow / max-flow / assignment), and CP-SAT (job-shop scheduling). Each with column-by-column log reader.',
@@ -398,7 +407,7 @@ const DEMOS = [
   },
   {
     id: 'pytorch-tutorial',
-    category: 'tutorials',
+    category: 'ml',
     title: 'PyTorch — Code Stepper',
     description:
       'Three classic ML problems with the same training-loop skeleton: linear regression, binary classification, and a small MLP on nonlinear data. State panel renders the model architecture and loss curve.',
@@ -406,7 +415,7 @@ const DEMOS = [
   },
   {
     id: 'ml-compare',
-    category: 'tutorials',
+    category: 'ml',
     title: 'ML — Same Problem, Three Ways',
     description:
       'Same binary-classification problem solved three ways: scikit-learn (high-level), PyTorch (mid-level), and from scratch with NumPy. Side-by-side code, pros/cons, and a comparison table.',
@@ -414,7 +423,7 @@ const DEMOS = [
   },
   {
     id: 'nlp-applications',
-    category: 'tutorials',
+    category: 'nlp',
     title: 'NLP Applications — Code Stepper',
     description:
       'Four NLP applications across four domains: rocket trajectory (optimal control), cantilever beam (engineering), robust regression (statistics), open-top container (geometric programming). All in Pyomo + IPOPT.',
@@ -422,7 +431,7 @@ const DEMOS = [
   },
   {
     id: 'ise-applications',
-    category: 'tutorials',
+    category: 'nlp',
     title: 'ISE Applications — Code Stepper',
     description:
       'Four classics ISE students should recognize: EOQ with backordering (inventory), Weber facility location (logistics), multi-period production smoothing (production), multi-product newsvendor with budget (inventory under uncertainty).',
@@ -432,45 +441,24 @@ const DEMOS = [
 
 // ---------- Subcomponents ----------
 function DemoCard({ demo, onClick }) {
-  const isTutorial = demo.category === 'tutorials';
   return (
-    <button onClick={onClick} style={cardStyle(isTutorial)}>
+    <button onClick={onClick} style={cardStyle()}>
       <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 6, color: '#111' }}>
         {demo.title}
       </div>
       <div style={{ fontSize: 13.5, color: '#555', lineHeight: 1.45 }}>
         {demo.description}
       </div>
-      {isTutorial && (
-        <div
-          style={{
-            marginTop: 10,
-            display: 'inline-block',
-            padding: '2px 8px',
-            background: '#fdecea',
-            color: '#c8311c',
-            borderRadius: 4,
-            fontFamily: 'monospace',
-            fontSize: 10.5,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            fontWeight: 600,
-          }}
-        >
-          for instructor demo
-        </div>
-      )}
     </button>
   );
 }
 
-function cardStyle(isTutorial) {
+function cardStyle() {
   return {
     display: 'block',
     textAlign: 'left',
     padding: '18px 20px',
     border: '1px solid #e3e3e3',
-    borderLeft: isTutorial ? '4px solid #c8311c' : '1px solid #e3e3e3',
     borderRadius: 10,
     background: '#fff',
     cursor: 'pointer',
