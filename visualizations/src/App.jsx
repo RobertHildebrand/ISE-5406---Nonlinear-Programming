@@ -42,6 +42,9 @@ import DualConstructionDemo from '../dual_construction_demo.jsx';
 import SensitivityWalkthroughDemo from '../sensitivity_walkthrough_demo.jsx';
 import PythonBasicsTutorial from '../python_basics_tutorial.jsx';
 import ObjectiveSliderDemo from '../objective_slider_demo.jsx';
+import TwoPhaseSimplexDemo from '../two_phase_simplex_demo.jsx';
+import DualSimplexDemo from '../dual_simplex_demo.jsx';
+import ModelingIntroduction from '../modeling_introduction.jsx';
 
 // ---------- Categories (display order: LP → IP → NLP → ML → Tutorials) ----------
 const CATEGORIES = [
@@ -228,6 +231,22 @@ const DEMOS = [
     Component: SimplexTableauDemo,
   },
   {
+    id: 'two-phase-simplex',
+    category: 'lp',
+    title: 'Two-Phase Simplex',
+    description:
+      'When the LP has ≥ or = constraints, you can\'t just slap on slacks and start at the origin. Add artificial variables, minimize their sum (Phase 1), then switch to the original objective (Phase 2). Three example LPs including an infeasible one — watch artificials get driven out of the basis (or fail to).',
+    Component: TwoPhaseSimplexDemo,
+  },
+  {
+    id: 'dual-simplex',
+    category: 'lp',
+    title: 'Dual Simplex',
+    description:
+      'Maintains DUAL feasibility, chases primal feasibility — pick the leaving row first (negative RHS), then the entering column via dual ratio test. Used in MIP cuts, RHS perturbations, and post-modification re-optimization. Three preset tableaux including a Gomory-cut scenario, with side-by-side comparison of primal vs dual pivot rules.',
+    Component: DualSimplexDemo,
+  },
+  {
     id: 'tableau-pivoter',
     category: 'lp',
     title: 'Tableau Pivoter — Step-by-Step Row Ops',
@@ -325,6 +344,14 @@ const DEMOS = [
   },
 
   // ── In-class tutorials ─────────────────────────────────────────
+  {
+    id: 'modeling-introduction',
+    category: 'tutorials',
+    title: 'Modeling Introduction — Translate a Problem into a Model',
+    description:
+      'Seven tabs walking through how to turn a real-world problem into an optimization model: the variables/constraints/objective trio, a fully worked bakery example, 12 common modeling patterns, variable types (incl. fixed-charge big-M), 10 pitfalls, the bridge to Pyomo / AMPL / gurobipy, and 4 click-to-reveal practice problems.',
+    Component: ModelingIntroduction,
+  },
   {
     id: 'python-basics',
     category: 'tutorials',
