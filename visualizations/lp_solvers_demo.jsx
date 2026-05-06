@@ -437,7 +437,7 @@ function ApiCheatSheet() {
             {ROWS.map((row, i) => (
               <tr key={i} style={{ borderBottom: "1px dotted #eee" }}>
                 {row.map((cell, j) => (
-                  <td key={j} style={j === 0 ? { ...cell, fontWeight: 700, padding: 6 } : { padding: 6 }}>
+                  <td key={j} style={j === 0 ? { fontWeight: 700, padding: 6 } : { padding: 6 }}>
                     {cell}
                   </td>
                 ))}
